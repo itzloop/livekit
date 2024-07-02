@@ -304,7 +304,7 @@ func (w *Worker) handleRegister(req *livekit.RegisterWorkerRequest) {
 	w.registered.Store(true)
 	w.mu.Unlock()
 
-	w.Logger.Debugw("worker registered", "request", req)
+	w.Logger.Infow("worker registered", "request", logger.Proto(req))
 
 	w.sendRequest(&livekit.ServerMessage{
 		Message: &livekit.ServerMessage_Register{
