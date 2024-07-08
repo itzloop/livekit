@@ -269,6 +269,7 @@ func NewParticipant(params ParticipantParams) (*ParticipantImpl, error) {
 		dataChannelStats: telemetry.NewBytesTrackStats(
 			telemetry.BytesTrackIDForParticipantID(telemetry.BytesTrackTypeData, params.SID),
 			params.SID,
+			params.ClientInfo.Address,
 			params.Telemetry),
 		tracksQuality: make(map[livekit.TrackID]livekit.ConnectionQuality),
 		pubLogger:     params.Logger.WithComponent(sutils.ComponentPub),
