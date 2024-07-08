@@ -284,8 +284,8 @@ func NewParticipant(params ParticipantParams) (*ParticipantImpl, error) {
 		dataChannelStats: telemetry.NewBytesTrackStats(
 			telemetry.BytesTrackIDForParticipantID(telemetry.BytesTrackTypeData, params.SID),
 			params.SID,
-			params.Telemetry,
-		),
+			params.ClientInfo.Address,
+			params.Telemetry),
 		tracksQuality: make(map[livekit.TrackID]livekit.ConnectionQuality),
 		metricTimestamper: metric.NewMetricTimestamper(metric.MetricTimestamperParams{
 			Config: params.MetricConfig.Timestamper,
