@@ -15,8 +15,9 @@
 package prometheus
 
 import (
-	"fmt"
+	"errors"
 	"github.com/livekit/protocol/livekit"
+	"github.com/livekit/protocol/logger"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/atomic"
@@ -214,19 +215,19 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 	var err error
 	asnReader, err = geoip2.Open("/opt/maxmind/geoip.db")
 	if err != nil {
-		fmt.Println("***** FAILED TO READ GEO IP DB:", err)
+		logger.Errorw("Failed to read geoData", err)
 	}
 }
 
 func IncrementByteWithAsn(direction Direction, count uint64, address string) {
 	if asnReader == nil {
-		fmt.Println("**** ASNREADER IS NILL, CANNOT ADD METRICS")
+		logger.Errorw("Nil asnReader, metrics are being lost", errors.New("nil asn reader"))
 		return
 	}
 
 	res, err := asnReader.ASN(net.ParseIP(address))
 	if err != nil {
-		fmt.Println("*** FAILED TO GET ASN FOR", address, "WITH ERR:", err)
+		logger.Errorw("failed to get asn for ip "+address, err)
 	}
 
 	promAsnBytes.WithLabelValues(strconv.Itoa(int(res.AutonomousSystemNumber)), string(direction)).Add(float64(count))
