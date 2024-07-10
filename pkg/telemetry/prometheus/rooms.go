@@ -15,6 +15,8 @@
 package prometheus
 
 import (
+	"github.com/livekit/protocol/logger"
+	"net"
 	"strconv"
 	"time"
 
@@ -46,6 +48,9 @@ var (
 	promTrackSubscribeCounter  *prometheus.CounterVec
 	promSessionStartTime       *prometheus.HistogramVec
 	promSessionDuration        *prometheus.HistogramVec
+
+	// custom
+	promSessionStartTimePerAsn *prometheus.HistogramVec
 )
 
 func initRoomStats(nodeID string, nodeType livekit.NodeType) {
@@ -109,6 +114,14 @@ func initRoomStats(nodeID string, nodeType livekit.NodeType) {
 		Buckets:     prometheus.ExponentialBucketsRange(100, 4*60*60*1000, 15),
 	}, []string{"protocol_version"})
 
+	promSessionStartTimePerAsn = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "session",
+		Name:        "session_time_ms_per_asn",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
+		Buckets:     prometheus.ExponentialBucketsRange(100, 20000, 15),
+	}, []string{"protocol_version", "asn"})
+
 	prometheus.MustRegister(promRoomCurrent)
 	prometheus.MustRegister(promRoomDuration)
 	prometheus.MustRegister(promParticipantCurrent)
@@ -118,6 +131,7 @@ func initRoomStats(nodeID string, nodeType livekit.NodeType) {
 	prometheus.MustRegister(promTrackSubscribeCounter)
 	prometheus.MustRegister(promSessionStartTime)
 	prometheus.MustRegister(promSessionDuration)
+	prometheus.MustRegister(promSessionStartTimePerAsn)
 }
 
 func RoomStarted() {
@@ -192,8 +206,13 @@ func RecordTrackSubscribeFailure(err error, isUserError bool) {
 	}
 }
 
-func RecordSessionStartTime(protocolVersion int, d time.Duration) {
+func RecordSessionStartTime(protocolVersion int, d time.Duration, address string) {
+	data, err := asnReader.ASN(net.ParseIP(address))
+	if err != nil {
+		logger.Errorw("Failed to get asn data", err)
+	}
 	promSessionStartTime.WithLabelValues(strconv.Itoa(protocolVersion)).Observe(float64(d.Milliseconds()))
+	promSessionStartTimePerAsn.WithLabelValues(strconv.Itoa(protocolVersion), strconv.Itoa(int(data.AutonomousSystemNumber))).Observe(float64(d.Milliseconds()))
 }
 
 func RecordSessionDuration(protocolVersion int, d time.Duration) {
