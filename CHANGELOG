@@ -230,7 +230,7 @@ Support for the Agent framework.
 - Continued AV Sync improvements (#2150 #2153)
 - Egress store/IO cleanup (required for Egress 1.8.0) (#2152)
 - More fine grained filtering NACKs after a key frame. (#2159)
-- Don't filter out ipv6 address for client don't support prflx over relay (#2193)
+- Don't filter out ipv6 Address for client don't support prflx over relay (#2193)
 - Disable h264 for android firefox (#2190)
 - Do not block on down track close with flush. (#2201)
 - Separate publish and subscribe enabled codecs for finer grained control. (#2217)
@@ -331,7 +331,7 @@ Support for the Agent framework.
 - Send Room metadata updates immediately after update (#1787)
 - Do not send ParticipantJoined webhook if connection was resumed (#1795)
 - Reduce memory leaks by avoiding references in closure. (#1809)
-- Honor bind address passed as `--bind` also for RTC ports (#1815)
+- Honor bind Address passed as `--bind` also for RTC ports (#1815)
 - Avoid dangling downtracks by always deleting them in receiver close. (#1842)
 - Better cleanup of subscriptions with needsCleanup. (#1845)
 - Fix nack issue for svc codecs (#1856)
@@ -627,7 +627,7 @@ Support for the Agent framework.
 - Split out shared media transport code into livekit/mediatransportutil #1071
 - Cleaned up logging, improved consistency of debug vs info #1073
 - Reduced memory usage with sequencer #1100
-- Improved IP address mapping, handling of multiple IPs #1094
+- Improved IP Address mapping, handling of multiple IPs #1094
 - Service API requests are logged #1091
 - Default HTTP handler responds with 404 for unknown paths #1088
 
@@ -670,7 +670,7 @@ Support for the Agent framework.
 ## [1.2.0] - 2022-08-25
 ### Added
 - Support for NACK with audio tracks (#829)
-- Allow binding HTTP server to specific address, binds to localhost in dev mode(#831)
+- Allow binding HTTP server to specific Address, binds to localhost in dev mode(#831)
 - Packet stats from TC (#832)
 - Automatic connectivity fallback to TCP & TURN (#872 #873 #874 #901 #950)
 - Support for client-side ping/pong messages (#871)

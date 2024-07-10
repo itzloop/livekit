@@ -57,17 +57,17 @@ type BytesTrackStats struct {
 	totalSendMessages, totalRecvMessages atomic.Uint32
 	telemetry                            TelemetryService
 	done                                 core.Fuse
+	mu                                   sync.Mutex
 
 	// Custom Address
 	Address string
 }
 
-func NewBytesTrackStats(trackID livekit.TrackID, pID livekit.ParticipantID, address string, telemetry TelemetryService) *BytesTrackStats {
+func NewBytesTrackStats(trackID livekit.TrackID, pID livekit.ParticipantID, telemetry TelemetryService) *BytesTrackStats {
 	s := &BytesTrackStats{
 		trackID:   trackID,
 		pID:       pID,
 		telemetry: telemetry,
-		Address:   address,
 	}
 	go s.reporter()
 	return s
@@ -129,11 +129,20 @@ func (s *BytesTrackStats) report() {
 	}
 }
 
+func (s *BytesTrackStats) ChangeAddress(address string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.report()
+	s.Address = address
+}
+
 func (s *BytesTrackStats) reporter() {
 	ticker := time.NewTicker(config.TelemetryNonMediaStatsUpdateInterval)
 	defer func() {
 		ticker.Stop()
+		s.mu.Lock()
 		s.report()
+		s.mu.Unlock()
 	}()
 
 	for {
@@ -141,7 +150,9 @@ func (s *BytesTrackStats) reporter() {
 		case <-s.done.Watch():
 			return
 		case <-ticker.C:
+			s.mu.Lock()
 			s.report()
+			s.mu.Unlock()
 		}
 	}
 }
