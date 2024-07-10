@@ -292,7 +292,7 @@ func NewParticipant(params ParticipantParams) (*ParticipantImpl, error) {
 		dataChannelStats: telemetry.NewBytesTrackStats(
 			telemetry.BytesTrackIDForParticipantID(telemetry.BytesTrackTypeData, params.SID),
 			params.SID,
-			params.ClientInfo.Address,
+			"", // TODO fix address
 			params.Telemetry,
 		),
 		connectionQuality: livekit.ConnectionQuality_EXCELLENT,
@@ -1244,6 +1244,7 @@ func (p *ParticipantImpl) ICERestart(iceConfig *livekit.ICEConfig) {
 	for _, t := range p.GetPublishedTracks() {
 		t.(types.LocalMediaTrack).Restart()
 	}
+	p.dataChannelStats.Address = "" // TODO set new address here
 
 	if err := p.TransportManager.ICERestart(iceConfig); err != nil {
 		p.IssueFullReconnect(types.ParticipantCloseReasonNegotiateFailed)
@@ -1995,7 +1996,7 @@ func (p *ParticipantImpl) onPrimaryTransportInitialConnected() {
 
 func (p *ParticipantImpl) onPrimaryTransportFullyEstablished() {
 	if !p.sessionStartRecorded.Swap(true) {
-		prometheus.RecordSessionStartTime(int(p.ProtocolVersion()), time.Since(p.params.SessionStartTime))
+		prometheus.RecordSessionStartTime(int(p.ProtocolVersion()), time.Since(p.params.SessionStartTime), "") // TODO fix address
 	}
 	p.updateState(livekit.ParticipantInfo_ACTIVE)
 }
