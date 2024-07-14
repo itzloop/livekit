@@ -15,10 +15,14 @@
 package prometheus
 
 import (
+	"errors"
+	"github.com/livekit/protocol/livekit"
+	"github.com/livekit/protocol/logger"
+	"github.com/oschwald/geoip2-golang"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/atomic"
-
-	"github.com/livekit/protocol/livekit"
+	"net"
+	"strconv"
 )
 
 type Direction string
@@ -43,6 +47,9 @@ var (
 	participantRTCInit         atomic.Uint64
 	forwardLatency             atomic.Uint32
 	forwardJitter              atomic.Uint32
+
+	// Custom
+	promAsnBytes *prometheus.CounterVec
 
 	promPacketLabels    = []string{"direction", "transmission"}
 	promPacketTotal     *prometheus.CounterVec
@@ -70,6 +77,8 @@ var (
 	promPacketBytesOutgoingInitial    prometheus.Counter
 	promPacketBytesOutgoingRetransmit prometheus.Counter
 )
+
+var asnReader *geoip2.Reader
 
 func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 	promPacketTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
@@ -155,6 +164,12 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 		Name:        "jitter",
 		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
 	})
+	promAsnBytes = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "asn",
+		Name:        "bytes",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
+	}, []string{"asn", "direction"})
 
 	prometheus.MustRegister(promPacketTotal)
 	prometheus.MustRegister(promPacketBytes)
@@ -169,6 +184,7 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 	prometheus.MustRegister(promConnections)
 	prometheus.MustRegister(promForwardLatency)
 	prometheus.MustRegister(promForwardJitter)
+	prometheus.MustRegister(promAsnBytes)
 
 	promPacketTotalIncomingInitial = promPacketTotal.WithLabelValues(string(Incoming), transmissionInitial)
 	promPacketTotalIncomingRetransmit = promPacketTotal.WithLabelValues(string(Incoming), transmissionRetransmit)
@@ -178,6 +194,26 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 	promPacketBytesIncomingRetransmit = promPacketBytes.WithLabelValues(string(Incoming), transmissionRetransmit)
 	promPacketBytesOutgoingInitial = promPacketBytes.WithLabelValues(string(Outgoing), transmissionInitial)
 	promPacketBytesOutgoingRetransmit = promPacketBytes.WithLabelValues(string(Outgoing), transmissionRetransmit)
+
+	var err error
+	asnReader, err = geoip2.Open("/opt/maxmind/geoip.db")
+	if err != nil {
+		logger.Errorw("Failed to read geoData", err)
+	}
+}
+
+func IncrementByteWithAsn(direction Direction, count uint64, address string) {
+	if asnReader == nil {
+		logger.Errorw("Nil asnReader, metrics are being lost", errors.New("nil asn reader"))
+		return
+	}
+
+	res, err := asnReader.ASN(net.ParseIP(address))
+	if err != nil {
+		logger.Errorw("failed to get asn for ip "+address, err)
+	}
+
+	promAsnBytes.WithLabelValues(strconv.Itoa(int(res.AutonomousSystemNumber)), string(direction)).Add(float64(count))
 }
 
 func IncrementPackets(direction Direction, count uint64, retransmit bool) {

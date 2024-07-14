@@ -57,6 +57,10 @@ type BytesTrackStats struct {
 	totalSendMessages, totalRecvMessages atomic.Uint32
 	telemetry                            TelemetryService
 	done                                 core.Fuse
+	mu                                   sync.Mutex
+
+	// Custom Address
+	Address string
 }
 
 func NewBytesTrackStats(trackID livekit.TrackID, pID livekit.ParticipantID, telemetry TelemetryService) *BytesTrackStats {
@@ -99,7 +103,9 @@ func (s *BytesTrackStats) Stop() {
 
 func (s *BytesTrackStats) report() {
 	if recv := s.recv.Swap(0); recv > 0 {
-		s.telemetry.TrackStats(StatsKeyForData(livekit.StreamType_UPSTREAM, s.pID, s.trackID), &livekit.AnalyticsStat{
+		key := StatsKeyForData(livekit.StreamType_UPSTREAM, s.pID, s.trackID)
+		key.addr = s.Address
+		s.telemetry.TrackStats(key, &livekit.AnalyticsStat{
 			Streams: []*livekit.AnalyticsStream{
 				{
 					PrimaryBytes:   recv,
@@ -110,7 +116,9 @@ func (s *BytesTrackStats) report() {
 	}
 
 	if send := s.send.Swap(0); send > 0 {
-		s.telemetry.TrackStats(StatsKeyForData(livekit.StreamType_DOWNSTREAM, s.pID, s.trackID), &livekit.AnalyticsStat{
+		key := StatsKeyForData(livekit.StreamType_DOWNSTREAM, s.pID, s.trackID)
+		key.addr = s.Address
+		s.telemetry.TrackStats(key, &livekit.AnalyticsStat{
 			Streams: []*livekit.AnalyticsStream{
 				{
 					PrimaryBytes:   send,
@@ -121,11 +129,20 @@ func (s *BytesTrackStats) report() {
 	}
 }
 
+func (s *BytesTrackStats) ChangeAddress(address string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.report()
+	s.Address = address
+}
+
 func (s *BytesTrackStats) reporter() {
 	ticker := time.NewTicker(config.TelemetryNonMediaStatsUpdateInterval)
 	defer func() {
 		ticker.Stop()
+		s.mu.Lock()
 		s.report()
+		s.mu.Unlock()
 	}()
 
 	for {
@@ -133,7 +150,9 @@ func (s *BytesTrackStats) reporter() {
 		case <-s.done.Watch():
 			return
 		case <-ticker.C:
+			s.mu.Lock()
 			s.report()
+			s.mu.Unlock()
 		}
 	}
 }

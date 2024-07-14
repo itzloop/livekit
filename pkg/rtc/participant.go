@@ -298,6 +298,7 @@ func NewParticipant(params ParticipantParams) (*ParticipantImpl, error) {
 
 	p.setupUpTrackManager()
 	p.setupSubscriptionManager()
+	p.GetICEConnectionDetails()
 
 	return p, nil
 }
@@ -1439,6 +1440,18 @@ func (p *ParticipantImpl) updateState(state livekit.ParticipantInfo_State) {
 	if onStateChange := p.getOnStateChange(); onStateChange != nil {
 		go onStateChange(p, state)
 	}
+
+	if state == livekit.ParticipantInfo_ACTIVE {
+		var addr string
+		for _, detail := range p.TransportManager.GetICEConnectionDetails() {
+			for _, candidate := range detail.Remote {
+				if candidate.Selected {
+					addr = candidate.Remote.Address()
+				}
+			}
+		}
+		p.dataChannelStats.ChangeAddress(addr)
+	}
 }
 
 func (p *ParticipantImpl) setIsPublisher(isPublisher bool) {
@@ -1636,7 +1649,15 @@ func (p *ParticipantImpl) onPrimaryTransportInitialConnected() {
 
 func (p *ParticipantImpl) onPrimaryTransportFullyEstablished() {
 	if !p.sessionStartRecorded.Swap(true) {
-		prometheus.RecordSessionStartTime(int(p.ProtocolVersion()), time.Since(p.params.SessionStartTime))
+		var addr string
+		for _, detail := range p.TransportManager.GetICEConnectionDetails() {
+			for _, candidate := range detail.Remote {
+				if candidate.Selected {
+					addr = candidate.Remote.Address()
+				}
+			}
+		}
+		prometheus.RecordSessionStartTime(int(p.ProtocolVersion()), time.Since(p.params.SessionStartTime), addr)
 	}
 	p.updateState(livekit.ParticipantInfo_ACTIVE)
 }
