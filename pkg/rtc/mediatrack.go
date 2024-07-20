@@ -204,7 +204,7 @@ func (t *MediaTrack) UpdateCodecCid(codecs []*livekit.SimulcastCodec) {
 }
 
 // AddReceiver adds a new RTP receiver to the track, returns true when receiver represents a new codec
-func (t *MediaTrack) AddReceiver(receiver *webrtc.RTPReceiver, track sfu.TrackRemote, mid string) bool {
+func (t *MediaTrack) AddReceiver(receiver *webrtc.RTPReceiver, track sfu.TrackRemote, mid string, addr string) bool {
 	var newCodec bool
 	ssrc := uint32(track.SSRC())
 	buff, rtcpReader := t.params.BufferFactory.GetBufferPair(ssrc)
@@ -316,6 +316,7 @@ func (t *MediaTrack) AddReceiver(receiver *webrtc.RTPReceiver, track sfu.TrackRe
 		if priority == 0 {
 			newWR.OnStatsUpdate(func(_ *sfu.WebRTCReceiver, stat *livekit.AnalyticsStat) {
 				key := telemetry.StatsKeyForTrack(livekit.StreamType_UPSTREAM, t.PublisherID(), t.ID(), ti.Source, ti.Type)
+				key.Addr = addr
 				t.params.Telemetry.TrackStats(key, stat)
 			})
 
