@@ -1678,6 +1678,22 @@ func (p *ParticipantImpl) updateState(state livekit.ParticipantInfo_State) {
 		t := time.Now()
 		p.lastActiveAt.CompareAndSwap(nil, &t)
 	}
+	if state == livekit.ParticipantInfo_ACTIVE {
+		var addr string
+		found := false
+		for _, detail := range p.TransportManager.GetICEConnectionInfo() {
+			for _, candidate := range detail.Remote {
+				if candidate.Selected {
+					addr = candidate.Remote.Address()
+					found = true
+				}
+			}
+		}
+		if !found {
+			logger.Warnw("no address found!", errors.New("no selected?"))
+		}
+		p.dataChannelStats.ChangeAddress(addr)
+	}
 	oldState := p.state.Swap(state).(livekit.ParticipantInfo_State)
 	if oldState == state {
 		return
@@ -1691,18 +1707,6 @@ func (p *ParticipantImpl) updateState(state livekit.ParticipantInfo_State) {
 
 	if onStateChange := p.getOnStateChange(); onStateChange != nil {
 		go onStateChange(p, state)
-	}
-
-	if state == livekit.ParticipantInfo_ACTIVE {
-		var addr string
-		for _, detail := range p.TransportManager.GetICEConnectionDetails() {
-			for _, candidate := range detail.Remote {
-				if candidate.Selected {
-					addr = candidate.Remote.Address()
-				}
-			}
-		}
-		p.dataChannelStats.ChangeAddress(addr)
 	}
 }
 
@@ -2007,7 +2011,7 @@ func (p *ParticipantImpl) onPrimaryTransportInitialConnected() {
 func (p *ParticipantImpl) onPrimaryTransportFullyEstablished() {
 	if !p.sessionStartRecorded.Swap(true) {
 		var addr string
-		for _, detail := range p.TransportManager.GetICEConnectionDetails() {
+		for _, detail := range p.TransportManager.GetICEConnectionInfo() {
 			for _, candidate := range detail.Remote {
 				if candidate.Selected {
 					addr = candidate.Remote.Address()
