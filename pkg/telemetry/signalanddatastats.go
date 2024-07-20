@@ -132,8 +132,13 @@ func (s *BytesTrackStats) report() {
 func (s *BytesTrackStats) ChangeAddress(address string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.report()
-	s.Address = address
+	if s.Address == "" {
+		s.Address = address
+		s.report()
+	} else {
+		s.report()
+		s.Address = address
+	}
 }
 
 func (s *BytesTrackStats) reporter() {
