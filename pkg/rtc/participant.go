@@ -2259,7 +2259,15 @@ func (p *ParticipantImpl) mediaTrackReceived(track *webrtc.TrackRemote, rtpRecei
 
 	p.pendingTracksLock.Unlock()
 
-	mt.AddReceiver(rtpReceiver, track, mid)
+	var addr string
+	for _, detail := range p.TransportManager.GetICEConnectionDetails() {
+		for _, candidate := range detail.Remote {
+			if candidate.Selected {
+				addr = candidate.Remote.Address()
+			}
+		}
+	}
+	mt.AddReceiver(rtpReceiver, track, mid, addr)
 
 	if newTrack {
 		go func() {
