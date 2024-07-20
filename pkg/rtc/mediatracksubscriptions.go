@@ -193,8 +193,17 @@ func (t *MediaTrackSubscriptions) AddSubscriber(sub types.LocalParticipant, wr *
 		subTrack.SetPublisherMuted(t.params.MediaTrack.IsMuted())
 	})
 
+	var addr string
+	for _, detail := range sub.GetICEConnectionDetails() {
+		for _, candidate := range detail.Remote {
+			if candidate.Selected {
+				addr = candidate.Remote.Address()
+			}
+		}
+	}
 	downTrack.OnStatsUpdate(func(_ *sfu.DownTrack, stat *livekit.AnalyticsStat) {
 		key := telemetry.StatsKeyForTrack(livekit.StreamType_DOWNSTREAM, subscriberID, trackID, t.params.MediaTrack.Source(), t.params.MediaTrack.Kind())
+		key.Addr = addr
 		t.params.Telemetry.TrackStats(key, stat)
 	})
 

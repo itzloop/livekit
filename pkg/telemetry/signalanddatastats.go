@@ -104,7 +104,7 @@ func (s *BytesTrackStats) Stop() {
 func (s *BytesTrackStats) report() {
 	if recv := s.recv.Swap(0); recv > 0 {
 		key := StatsKeyForData(livekit.StreamType_UPSTREAM, s.pID, s.trackID)
-		key.addr = s.Address
+		key.Addr = s.Address
 		s.telemetry.TrackStats(key, &livekit.AnalyticsStat{
 			Streams: []*livekit.AnalyticsStream{
 				{
@@ -117,7 +117,7 @@ func (s *BytesTrackStats) report() {
 
 	if send := s.send.Swap(0); send > 0 {
 		key := StatsKeyForData(livekit.StreamType_DOWNSTREAM, s.pID, s.trackID)
-		key.addr = s.Address
+		key.Addr = s.Address
 		s.telemetry.TrackStats(key, &livekit.AnalyticsStat{
 			Streams: []*livekit.AnalyticsStream{
 				{
