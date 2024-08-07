@@ -12,6 +12,7 @@ require (
 	github.com/frostbyte73/core v0.0.10
 	github.com/gammazero/deque v0.2.1
 	github.com/gammazero/workerpool v1.1.3
+	github.com/golang/protobuf v1.5.4
 	github.com/google/wire v0.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/go-version v1.7.0
@@ -28,6 +29,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/ory/dockertest/v3 v3.10.0
+	github.com/oschwald/geoip2-golang v1.11.0
 	github.com/pion/dtls/v2 v2.2.11
 	github.com/pion/ice/v2 v2.3.24
 	github.com/pion/interceptor v0.1.29
@@ -103,7 +105,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/opencontainers/runc v1.1.13 // indirect
-	github.com/oschwald/geoip2-golang v1.11.0 // indirect
 	github.com/oschwald/maxminddb-golang v1.13.0 // indirect
 	github.com/pion/datachannel v1.5.5 // indirect
 	github.com/pion/logging v0.2.2 // indirect
