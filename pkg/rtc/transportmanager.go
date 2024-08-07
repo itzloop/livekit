@@ -94,6 +94,7 @@ type TransportManagerParams struct {
 	SubscriberHandler            transport.Handler
 	DataChannelStats             *telemetry.BytesTrackStats
 	DropRemoteICECandidates      bool
+	LiteModeTransportConfig      LiteModeTransportConfig
 }
 
 type TransportManager struct {
@@ -148,6 +149,7 @@ func NewTransportManager(params TransportManagerParams) (*TransportManager, erro
 		Transport:               livekit.SignalTarget_PUBLISHER,
 		Handler:                 TransportManagerPublisherTransportHandler{TransportManagerTransportHandler{params.PublisherHandler, t}},
 		DropRemoteICECandidates: params.DropRemoteICECandidates,
+		LiteModeTransportConfig: params.LiteModeTransportConfig,
 	})
 	if err != nil {
 		return nil, err
@@ -171,6 +173,7 @@ func NewTransportManager(params TransportManagerParams) (*TransportManager, erro
 		Transport:                    livekit.SignalTarget_SUBSCRIBER,
 		Handler:                      TransportManagerTransportHandler{params.SubscriberHandler, t},
 		DropRemoteICECandidates:      params.DropRemoteICECandidates,
+		LiteModeTransportConfig:      params.LiteModeTransportConfig,
 	})
 	if err != nil {
 		return nil, err
