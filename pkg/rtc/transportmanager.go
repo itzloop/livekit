@@ -88,6 +88,7 @@ type TransportManagerParams struct {
 	Logger                       logger.Logger
 	PublisherHandler             transport.Handler
 	SubscriberHandler            transport.Handler
+	LiteModeTransportConfig      LiteModeTransportConfig
 }
 
 type TransportManager struct {
@@ -141,6 +142,7 @@ func NewTransportManager(params TransportManagerParams) (*TransportManager, erro
 		ClientInfo:              params.ClientInfo,
 		Transport:               livekit.SignalTarget_PUBLISHER,
 		Handler:                 TransportManagerPublisherTransportHandler{TransportManagerTransportHandler{params.PublisherHandler, t}},
+		LiteModeTransportConfig: params.LiteModeTransportConfig,
 	})
 	if err != nil {
 		return nil, err
@@ -163,6 +165,7 @@ func NewTransportManager(params TransportManagerParams) (*TransportManager, erro
 		DataChannelMaxBufferedAmount: params.DataChannelMaxBufferedAmount,
 		Transport:                    livekit.SignalTarget_SUBSCRIBER,
 		Handler:                      TransportManagerTransportHandler{params.SubscriberHandler, t},
+		LiteModeTransportConfig:      params.LiteModeTransportConfig,
 	})
 	if err != nil {
 		return nil, err

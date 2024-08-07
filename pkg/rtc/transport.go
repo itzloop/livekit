@@ -74,7 +74,9 @@ const (
 	minConnectTimeoutAfterICE = 10 * time.Second
 	maxConnectTimeoutAfterICE = 20 * time.Second // max duration for waiting pc to connect after ICE is connected
 
-	shortConnectionThreshold = 90 * time.Second
+	shortConnectionThreshold    = 90 * time.Second
+	defaultLiteModeAudioBitrate = 20
+	defaultLiteModeVideoBitrate = 50
 )
 
 var (
@@ -219,6 +221,13 @@ type TransportParams struct {
 	IsSendSide                   bool
 	AllowPlayoutDelay            bool
 	DataChannelMaxBufferedAmount uint64
+	LiteModeTransportConfig      LiteModeTransportConfig
+}
+
+type LiteModeTransportConfig struct {
+	IsLiteMode   bool
+	AudioBitrate int64
+	VideoBitrate int64
 }
 
 func newPeerConnection(params TransportParams, onBandwidthEstimator func(estimator cc.BandwidthEstimator)) (*webrtc.PeerConnection, *webrtc.MediaEngine, error) {
@@ -386,6 +395,25 @@ func NewPCTransport(params TransportParams) (*PCTransport, error) {
 	if params.Logger == nil {
 		params.Logger = logger.GetLogger()
 	}
+
+	if params.LiteModeTransportConfig.IsLiteMode &&
+		(params.LiteModeTransportConfig.AudioBitrate == 0 ||
+			params.LiteModeTransportConfig.VideoBitrate == 0) {
+
+		if params.LiteModeTransportConfig.VideoBitrate == 0 {
+			params.LiteModeTransportConfig.VideoBitrate = defaultLiteModeVideoBitrate
+		}
+
+		if params.LiteModeTransportConfig.AudioBitrate == 0 {
+			params.LiteModeTransportConfig.AudioBitrate = defaultLiteModeAudioBitrate
+		}
+
+		params.Logger.Debugw("creating pc transport in lite mode",
+			"lite_audio_bitrate", params.LiteModeTransportConfig.AudioBitrate,
+			"lite_video_bitrate", params.LiteModeTransportConfig.VideoBitrate,
+		)
+	}
+
 	t := &PCTransport{
 		params:             params,
 		debouncedNegotiate: debounce.New(negotiationFrequency),
@@ -1580,6 +1608,8 @@ func (t *PCTransport) createAndSendOffer(options *webrtc.OfferOptions) error {
 		t.params.Logger.Debugw("local offer (filtered)", "sdp", offer.SDP)
 	}
 
+	offer = t.overwriteBitrate(offer)
+
 	// indicate waiting for remote
 	t.setNegotiationState(transport.NegotiationStateRemote)
 
@@ -1697,6 +1727,8 @@ func (t *PCTransport) createAndSendAnswer() error {
 		t.params.Logger.Debugw("local answer (filtered)", "sdp", answer.SDP)
 	}
 
+	answer = t.overwriteBitrate(answer)
+
 	if err := t.params.Handler.OnAnswer(answer); err != nil {
 		prometheus.ServiceOperationCounter.WithLabelValues("answer", "error", "write_message").Add(1)
 		return errors.Wrap(err, "could not send answer")
@@ -1704,6 +1736,48 @@ func (t *PCTransport) createAndSendAnswer() error {
 
 	prometheus.ServiceOperationCounter.WithLabelValues("answer", "success", "").Add(1)
 	return t.localDescriptionSent()
+}
+
+func (t *PCTransport) overwriteBitrate(sd webrtc.SessionDescription) webrtc.SessionDescription {
+	if !t.params.LiteModeTransportConfig.IsLiteMode {
+		t.params.Logger.Debugw("not lite mode", "participant", t.params.ParticipantIdentity)
+		return sd
+	}
+
+	parsed, err := sd.Unmarshal()
+	if err != nil {
+        t.params.Logger.Debugw("failed to unmarshal sd", "spot", "overwriteBitrate")
+		return sd
+	}
+
+	for _, md := range parsed.MediaDescriptions {
+		if md.MediaName.Media == "video" {
+			t.params.Logger.Debugw("before overwriting video bitrate", "bandwidth", md.Bandwidth)
+			md.Bandwidth = append(md.Bandwidth, sdp.Bandwidth{
+				Type:      "AS",
+				Bandwidth: uint64(t.params.LiteModeTransportConfig.VideoBitrate),
+			})
+
+			t.params.Logger.Debugw("after overwriting video bitrate", "bandwidth", md.Bandwidth)
+		} else if md.MediaName.Media == "audio" {
+			t.params.Logger.Debugw("before overwriting audio bitrate", "bandwidth", md.Bandwidth)
+			md.Bandwidth = append(md.Bandwidth, sdp.Bandwidth{
+				Type:      "AS",
+				Bandwidth: uint64(t.params.LiteModeTransportConfig.AudioBitrate),
+			})
+
+			t.params.Logger.Debugw("after overwriting audio bitrate", "bandwidth", md.Bandwidth)
+		}
+	}
+
+	newAnswer, err := parsed.Marshal()
+	if err != nil {
+        t.params.Logger.Debugw("failed to marshal sd", "spot", "overwriteBitrate")
+		return sd
+	}
+
+	sd.SDP = string(newAnswer)
+	return sd
 }
 
 func (t *PCTransport) handleRemoteOfferReceived(sd *webrtc.SessionDescription) error {

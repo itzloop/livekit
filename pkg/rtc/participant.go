@@ -16,6 +16,7 @@ package rtc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -1382,6 +1383,31 @@ func (p *ParticipantImpl) setupTransportManager() error {
 		// the streams to be synced. Firefox doesn't support SyncStreams
 		params.AllowPlayoutDelay = false
 	}
+
+	// check for lite mode
+	if p.ClaimGrants() != nil {
+		var (
+			ok       bool
+			metadata = map[string]interface{}{}
+		)
+		err := json.Unmarshal([]byte(p.ClaimGrants().Metadata), &metadata)
+		if err != nil {
+			params.Logger.Warnw("failed to unmarshal participant metadata", err, "identity", p.Identity(), "metadata", metadata)
+		} else {
+			if params.LiteModeTransportConfig.IsLiteMode, ok = metadata["is_lite"].(bool); !ok {
+				params.Logger.Debugw("failed to read is_lite from metadata", "identity", p.Identity(), "metadata", metadata)
+			}
+
+			if params.LiteModeTransportConfig.VideoBitrate, ok = metadata["lite_video_bitrate"].(int64); !ok {
+				params.Logger.Debugw("failed to read is_lite from metadata", "identity", p.Identity(), "metadata", metadata)
+			}
+
+			if params.LiteModeTransportConfig.AudioBitrate, ok = metadata["lite_audio_bitrate"].(int64); !ok {
+				params.Logger.Debugw("failed to read is_lite from metadata", "identity", p.Identity(), "metadata", metadata)
+			}
+		}
+	}
+
 	tm, err := NewTransportManager(params)
 	if err != nil {
 		return err
