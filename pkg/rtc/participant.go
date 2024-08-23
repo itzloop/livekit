@@ -166,6 +166,8 @@ type ParticipantParams struct {
 	DatachannelSlowThreshold       int
 	FireOnTrackBySdp               bool
 	DisableCodecRegression         bool
+	StreamRoom                   bool
+	StreamerIdentity             string
 }
 
 type ParticipantImpl struct {
@@ -1567,12 +1569,16 @@ func (p *ParticipantImpl) setupTransportManager() error {
 				params.Logger.Debugw("failed to read is_lite from metadata", "identity", p.Identity(), "metadata", metadata)
 			}
 
-			if params.LiteModeTransportConfig.VideoBitrate, ok = metadata["lite_video_bitrate"].(int64); !ok {
-				params.Logger.Debugw("failed to read is_lite from metadata", "identity", p.Identity(), "metadata", metadata)
+			if v, ok := metadata["lite_video_bitrate"].(float64); !ok {
+				params.Logger.Debugw("failed to read lite_video_bitrate from metadata", "identity", p.Identity(), "metadata", metadata)
+			} else {
+				params.LiteModeTransportConfig.VideoBitrate = int64(v)
 			}
 
-			if params.LiteModeTransportConfig.AudioBitrate, ok = metadata["lite_audio_bitrate"].(int64); !ok {
-				params.Logger.Debugw("failed to read is_lite from metadata", "identity", p.Identity(), "metadata", metadata)
+			if v, ok := metadata["lite_audio_bitrate"].(int64); !ok {
+				params.Logger.Debugw("failed to read lite_audio_bitrate from metadata", "identity", p.Identity(), "metadata", metadata)
+			} else {
+				params.LiteModeTransportConfig.AudioBitrate = int64(v)
 			}
 		}
 	}
@@ -1635,6 +1641,8 @@ func (p *ParticipantImpl) setupSubscriptionManager() {
 		SubscriptionLimitVideo:   p.params.SubscriptionLimitVideo,
 		SubscriptionLimitAudio:   p.params.SubscriptionLimitAudio,
 		UseOneShotSignallingMode: p.params.UseOneShotSignallingMode,
+		StreamRoom:             p.params.StreamRoom,
+		StreamerIdentity:       p.params.StreamerIdentity,
 	})
 }
 
