@@ -451,7 +451,7 @@ func (r *RoomManager) StartSession(
 		StreamerIdentity string `json:"streamer_identity"`
 	}{}
 	if err = json.Unmarshal([]byte(room.ToProto().Metadata), &metadata); err != nil {
-		fmt.Println("sinalog", "failed to unmarshal room metadata", room.ToProto().Metadata, err)
+		logger.Errorw("failed to unmarshal room metadata", err, "metadata", room.ToProto().Metadata)
 	}
 
 	participant, err = rtc.NewParticipant(rtc.ParticipantParams{
