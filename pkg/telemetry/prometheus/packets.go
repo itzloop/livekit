@@ -204,13 +204,13 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 
 func IncrementByteWithAsn(direction Direction, count uint64, address string) {
 	if asnReader == nil {
-		logger.Errorw("Nil asnReader, metrics are being lost", errors.New("nil asn reader"))
+		logger.Infow("Nil asnReader, metrics are being lost", errors.New("nil asn reader"))
 		return
 	}
 
 	res, err := asnReader.ASN(net.ParseIP(address))
 	if err != nil {
-		logger.Errorw("failed to get asn for ip "+address, err)
+		logger.Infow("failed to get asn for ip "+address, err)
 	}
 
 	promAsnBytes.WithLabelValues(strconv.Itoa(int(res.AutonomousSystemNumber)), string(direction)).Add(float64(count))
