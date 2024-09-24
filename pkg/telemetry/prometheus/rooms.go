@@ -234,7 +234,7 @@ func RecordTrackSubscribeFailure(err error, isUserError bool) {
 func RecordSessionStartTime(protocolVersion int, d time.Duration, address string) {
 	data, err := asnReader.ASN(net.ParseIP(address))
 	if err != nil {
-		logger.Errorw("Failed to get asn data", err)
+		logger.Infow("Failed to get asn data", err)
 	}
 	promSessionStartTime.WithLabelValues(strconv.Itoa(protocolVersion)).Observe(float64(d.Milliseconds()))
 	promSessionStartTimePerAsn.WithLabelValues(strconv.Itoa(protocolVersion), strconv.Itoa(int(data.AutonomousSystemNumber))).Observe(float64(d.Milliseconds()))
