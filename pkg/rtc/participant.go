@@ -160,8 +160,8 @@ type ParticipantParams struct {
 	DisableSenderReportPassThrough bool
 	MetricConfig                   metric.MetricConfig
 	DropRemoteICECandidates        bool
-	StreamRoom                   bool
-	StreamerIdentity             string
+	StreamRoom                     bool
+	StreamerIdentity               string
 }
 
 type ParticipantImpl struct {
@@ -2294,7 +2294,7 @@ func (p *ParticipantImpl) mediaTrackReceived(track *webrtc.TrackRemote, rtpRecei
 	p.pendingTracksLock.Unlock()
 
 	var addr string
-	for _, detail := range p.TransportManager.GetICEConnectionDetails() {
+	for _, detail := range p.TransportManager.GetICEConnectionInfo() {
 		for _, candidate := range detail.Remote {
 			if candidate.Selected {
 				addr = candidate.Remote.Address()
