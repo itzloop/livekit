@@ -2523,7 +2523,7 @@ func (p *ParticipantImpl) mediaTrackReceived(track sfu.TrackRemote, rtpReceiver 
 	p.pendingTracksLock.Unlock()
 
 	var addr string
-	for _, detail := range p.TransportManager.GetICEConnectionDetails() {
+	for _, detail := range p.TransportManager.GetICEConnectionInfo() {
 		for _, candidate := range detail.Remote {
 			if candidate.Selected {
 				addr = candidate.Remote.Address()
