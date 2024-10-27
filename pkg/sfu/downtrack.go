@@ -384,6 +384,8 @@ func NewDownTrack(params DowntrackParams) (*DownTrack, error) {
 	d.connectionStats = connectionquality.NewConnectionStats(connectionquality.ConnectionStatsParams{
 		SenderProvider: d,
 		Logger:         d.params.Logger.WithValues("direction", "down"),
+		EnableBitrateScore: true,
+		IncludeRTT: true,
 	})
 	d.connectionStats.OnStatsUpdate(func(_cs *connectionquality.ConnectionStats, stat *livekit.AnalyticsStat) {
 		if onStatsUpdate := d.getOnStatsUpdate(); onStatsUpdate != nil {
