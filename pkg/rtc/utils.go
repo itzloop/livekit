@@ -20,7 +20,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/pion/webrtc/v3"
+	"github.com/pion/webrtc/v4"
 
 	"github.com/livekit/protocol/livekit"
 	"github.com/livekit/protocol/logger"

@@ -16,7 +16,7 @@ package rtc
 
 import (
 	"github.com/pion/sdp/v3"
-	"github.com/pion/webrtc/v3"
+	"github.com/pion/webrtc/v4"
 	"time"
 
 	"github.com/livekit/livekit-server/pkg/config"
@@ -77,6 +77,8 @@ func NewWebRTCConfig(conf *config.Config) (*WebRTCConfig, error) {
 		webrtc.NetworkTypeUDP4,
 		webrtc.NetworkTypeTCP4,
 	})
+
+	webRTCConfig.SettingEngine.EnableSCTPZeroChecksum(true)
 
 	if rtcConf.PacketBufferSize == 0 {
 		rtcConf.PacketBufferSize = 500
