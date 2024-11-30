@@ -1340,10 +1340,6 @@ func (h AnyTransportHandler) OnFailed(isShortLived bool) {
 	h.p.onAnyTransportFailed()
 }
 
-func (h AnyTransportHandler) OnClosed() {
-	h.p.onAnyTransportClosed()
-}
-
 func (h AnyTransportHandler) OnNegotiationFailed() {
 	h.p.onAnyTransportNegotiationFailed()
 }
@@ -1905,10 +1901,6 @@ func (p *ParticipantImpl) onAnyTransportFailed() {
 
 	// detect when participant has actually left.
 	p.setupDisconnectTimer()
-}
-
-func (p *ParticipantImpl) onAnyTransportClosed() {
-	_ = p.Close(false, types.ParticipantCloseReasonPeerConnectionDisconnected, false)
 }
 
 // subscriberRTCPWorker sends SenderReports periodically when the participant is subscribed to
