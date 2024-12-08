@@ -22,7 +22,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/atomic"
 	"net"
-	"strconv"
 )
 
 type Direction string
@@ -55,7 +54,7 @@ var (
 	promPacketTotal           *prometheus.CounterVec
 	promPacketBytes           *prometheus.CounterVec
 	promRTCPLabels            = []string{"direction"}
-	promStreamLabels          = []string{"direction", "source", "type"}
+	promStreamLabels          = []string{"direction", "source", "type", "asn"}
 	promNackTotal             *prometheus.CounterVec
 	promPliTotal              *prometheus.CounterVec
 	promFirTotal              *prometheus.CounterVec
@@ -219,18 +218,24 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 	}
 }
 
-func IncrementByteWithAsn(direction Direction, count uint64, address string) {
+func getASN(address string) string {
 	if asnReader == nil {
 		logger.Infow("Nil asnReader, metrics are being lost", errors.New("nil asn reader"))
-		return
+		return "unavailable"
 	}
 
 	res, err := asnReader.ASN(net.ParseIP(address))
 	if err != nil {
 		logger.Infow("failed to get asn for ip "+address, err)
+		return "unknown"
 	}
+	return res.AutonomousSystemOrganization
+}
 
-	promAsnBytes.WithLabelValues(strconv.Itoa(int(res.AutonomousSystemNumber)), string(direction)).Add(float64(count))
+func IncrementByteWithAsn(direction Direction, count uint64, address string) {
+	res := getASN(address)
+
+	promAsnBytes.WithLabelValues(res, string(direction)).Add(float64(count))
 }
 
 func IncrementPackets(direction Direction, count uint64, retransmit bool) {
@@ -296,33 +301,41 @@ func IncrementRTCP(direction Direction, nack, pli, fir uint32) {
 	}
 }
 
-func RecordPacketLoss(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, lost, total uint32) {
+func RecordPacketLoss(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, lost, total uint32, address string) {
+	res := getASN(address)
+
 	if total > 0 {
-		promPacketLoss.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Observe(float64(lost) / float64(total) * 100)
+		promPacketLoss.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(lost) / float64(total) * 100)
 	}
 	if lost > 0 {
-		promPacketLossTotal.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Add(float64(lost))
+		promPacketLossTotal.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Add(float64(lost))
 	}
 }
 
-func RecordPacketOutOfOrder(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, ooo, total uint32) {
+func RecordPacketOutOfOrder(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, ooo, total uint32, address string) {
+	res := getASN(address)
+
 	if total > 0 {
-		promPacketOutOfOrder.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Observe(float64(ooo) / float64(total) * 100)
+		promPacketOutOfOrder.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(ooo) / float64(total) * 100)
 	}
 	if ooo > 0 {
-		promPacketOutOfOrderTotal.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Add(float64(ooo))
+		promPacketOutOfOrderTotal.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Add(float64(ooo))
 	}
 }
 
-func RecordJitter(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, jitter uint32) {
+func RecordJitter(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, jitter uint32, address string) {
+	res := getASN(address)
+
 	if jitter > 0 {
-		promJitter.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Observe(float64(jitter))
+		promJitter.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(jitter))
 	}
 }
 
-func RecordRTT(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, rtt uint32) {
+func RecordRTT(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, rtt uint32, address string) {
+	res := getASN(address)
+
 	if rtt > 0 {
-		promRTT.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Observe(float64(rtt))
+		promRTT.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(rtt))
 	}
 }
 

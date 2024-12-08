@@ -199,7 +199,7 @@ func recordPubSubTime(isPublish bool, source livekit.TrackSource, trackType live
 	if isPublish {
 		direction = "publish"
 	}
-	promPubSubTime.WithLabelValues(direction, source.String(), trackType.String(), sdk.String(), kind.String(), strconv.Itoa(count)).Observe(float64(d.Milliseconds()))
+	promPubSubTime.WithLabelValues(direction, source.String(), trackType.String(), "none", sdk.String(), kind.String(), strconv.Itoa(count)).Observe(float64(d.Milliseconds()))
 }
 
 func RecordTrackSubscribeSuccess(kind string) {
