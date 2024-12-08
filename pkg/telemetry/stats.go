@@ -77,10 +77,10 @@ func (t *telemetryService) TrackStats(key StatsKey, stat *livekit.AnalyticsStat)
 				bytes += stream.RetransmitBytes
 			}
 			if key.track {
-				prometheus.RecordPacketLoss(direction, key.trackSource, key.trackType, stream.PacketsLost, stream.PrimaryPackets+stream.PaddingPackets)
-				prometheus.RecordPacketOutOfOrder(direction, key.trackSource, key.trackType, stream.PacketsOutOfOrder, stream.PrimaryPackets+stream.PaddingPackets)
-				prometheus.RecordRTT(direction, key.trackSource, key.trackType, stream.Rtt)
-				prometheus.RecordJitter(direction, key.trackSource, key.trackType, stream.Jitter)
+				prometheus.RecordPacketLoss(direction, key.trackSource, key.trackType, stream.PacketsLost, stream.PrimaryPackets+stream.PaddingPackets, key.Addr)
+				prometheus.RecordPacketOutOfOrder(direction, key.trackSource, key.trackType, stream.PacketsOutOfOrder, stream.PrimaryPackets+stream.PaddingPackets, key.Addr)
+				prometheus.RecordRTT(direction, key.trackSource, key.trackType, stream.Rtt, key.Addr)
+				prometheus.RecordJitter(direction, key.trackSource, key.trackType, stream.Jitter, key.Addr)
 			}
 		}
 		prometheus.IncrementRTCP(direction, nacks, plis, firs)
