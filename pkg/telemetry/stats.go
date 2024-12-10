@@ -92,6 +92,7 @@ func (t *telemetryService) TrackStats(key StatsKey, stat *livekit.AnalyticsStat)
 		}
 		if retransmitBytes != 0 {
 			prometheus.IncrementBytes(direction, retransmitBytes, true)
+			prometheus.IncrementByteWithAsn(direction, retransmitBytes, key.Addr)
 		}
 
 		if worker, ok := t.getWorker(key.participantID); ok {
