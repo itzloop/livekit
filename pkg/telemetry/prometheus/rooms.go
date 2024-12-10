@@ -232,16 +232,17 @@ func RecordTrackSubscribeFailure(err error, isUserError bool) {
 }
 
 func RecordSessionStartTime(protocolVersion int, d time.Duration, address string) {
-	asnID := uint(0)
+	asn := "unknown"
 	if asnReader != nil {
 		data, err := asnReader.ASN(net.ParseIP(address))
 		if err != nil {
 			logger.Infow("Failed to get asn data", err)
+		} else {
+			asn = data.AutonomousSystemOrganization
 		}
-		asnID = data.AutonomousSystemNumber
 	}
 	promSessionStartTime.WithLabelValues(strconv.Itoa(protocolVersion)).Observe(float64(d.Milliseconds()))
-	promSessionStartTimePerAsn.WithLabelValues(strconv.Itoa(protocolVersion), strconv.Itoa(int(asnID))).Observe(float64(d.Milliseconds()))
+	promSessionStartTimePerAsn.WithLabelValues(strconv.Itoa(protocolVersion), asn).Observe(float64(d.Milliseconds()))
 }
 
 func RecordSessionDuration(protocolVersion int, d time.Duration) {

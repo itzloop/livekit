@@ -1568,8 +1568,9 @@ func (p *ParticipantImpl) updateState(state livekit.ParticipantInfo_State) {
 		}
 		if !found {
 			logger.Warnw("no address found!", errors.New("no selected?"))
+		} else {
+			p.dataChannelStats.ChangeAddress(addr)
 		}
-		p.dataChannelStats.ChangeAddress(addr)
 	}
 	oldState := p.state.Swap(state).(livekit.ParticipantInfo_State)
 	if oldState == state {
