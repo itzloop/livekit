@@ -73,6 +73,10 @@ func NewWebRTCConfig(conf *config.Config) (*WebRTCConfig, error) {
 	webRTCConfig.SettingEngine.SetRelayAcceptanceMinWait(500 * time.Millisecond)
 	webRTCConfig.SettingEngine.SetPrflxAcceptanceMinWait(0)
 	webRTCConfig.SettingEngine.SetSrflxAcceptanceMinWait(0)
+	webRTCConfig.SettingEngine.SetNetworkTypes([]webrtc.NetworkType{
+		webrtc.NetworkTypeUDP4,
+		webrtc.NetworkTypeTCP4,
+	})
 
 	if rtcConf.PacketBufferSize == 0 {
 		rtcConf.PacketBufferSize = 500
@@ -130,6 +134,9 @@ func NewWebRTCConfig(conf *config.Config) (*WebRTCConfig, error) {
 			},
 		},
 		RTCPFeedback: RTCPFeedbackConfig{
+			Audio: []webrtc.RTCPFeedback{
+				{Type: webrtc.TypeRTCPFBNACK},
+			},
 			Video: []webrtc.RTCPFeedback{
 				{Type: webrtc.TypeRTCPFBCCM, Parameter: "fir"},
 				{Type: webrtc.TypeRTCPFBNACK},

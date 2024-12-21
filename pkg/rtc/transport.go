@@ -784,7 +784,10 @@ func (t *PCTransport) AddTrack(trackLocal webrtc.TrackLocal, params types.AddTra
 		return
 	}
 
-	configureAudioTransceiver(transceiver, params.Stereo, !params.Red || !t.params.ClientInfo.SupportsAudioRED())
+	if trackLocal.Kind() == webrtc.RTPCodecTypeAudio {
+		configureAudioTransceiver(transceiver, params.Stereo, !params.Red || !t.params.ClientInfo.SupportsAudioRED())
+	}
+
 	return
 }
 
@@ -800,7 +803,9 @@ func (t *PCTransport) AddTransceiverFromTrack(trackLocal webrtc.TrackLocal, para
 		return
 	}
 
-	configureAudioTransceiver(transceiver, params.Stereo, !params.Red || !t.params.ClientInfo.SupportsAudioRED())
+	if trackLocal.Kind() == webrtc.RTPCodecTypeAudio {
+		configureAudioTransceiver(transceiver, params.Stereo, !params.Red || !t.params.ClientInfo.SupportsAudioRED())
+	}
 
 	return
 }
@@ -1767,7 +1772,7 @@ func (t *PCTransport) overwriteBitrate(sd webrtc.SessionDescription) webrtc.Sess
 
 	parsed, err := sd.Unmarshal()
 	if err != nil {
-        t.params.Logger.Debugw("failed to unmarshal sd", "spot", "overwriteBitrate")
+		t.params.Logger.Debugw("failed to unmarshal sd", "spot", "overwriteBitrate")
 		return sd
 	}
 
@@ -1793,7 +1798,7 @@ func (t *PCTransport) overwriteBitrate(sd webrtc.SessionDescription) webrtc.Sess
 
 	newAnswer, err := parsed.Marshal()
 	if err != nil {
-        t.params.Logger.Debugw("failed to marshal sd", "spot", "overwriteBitrate")
+		t.params.Logger.Debugw("failed to marshal sd", "spot", "overwriteBitrate")
 		return sd
 	}
 
@@ -1948,6 +1953,8 @@ func (t *PCTransport) handleICERestart(_ event) error {
 }
 
 // configure subscriber transceiver for audio stereo and nack
+// pion doesn't support per transciver codec configuration, so the nack of this session will be disabled
+// forever once it is first disabled by a transceiver.
 func configureAudioTransceiver(tr *webrtc.RTPTransceiver, stereo bool, nack bool) {
 	sender := tr.Sender()
 	if sender == nil {
@@ -1962,16 +1969,12 @@ func configureAudioTransceiver(tr *webrtc.RTPTransceiver, stereo bool, nack bool
 			if stereo {
 				c.SDPFmtpLine += ";sprop-stereo=1"
 			}
-			if nack {
-				var nackFound bool
-				for _, fb := range c.RTCPFeedback {
+			if !nack {
+				for i, fb := range c.RTCPFeedback {
 					if fb.Type == webrtc.TypeRTCPFBNACK {
-						nackFound = true
+						c.RTCPFeedback = append(c.RTCPFeedback[:i], c.RTCPFeedback[i+1:]...)
 						break
 					}
-				}
-				if !nackFound {
-					c.RTCPFeedback = append(c.RTCPFeedback, webrtc.RTCPFeedback{Type: webrtc.TypeRTCPFBNACK})
 				}
 			}
 		}
