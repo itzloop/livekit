@@ -56,9 +56,9 @@ type TransportManagerTransportHandler struct {
 	t *TransportManager
 }
 
-func (h TransportManagerTransportHandler) OnFailed(isShortLived bool) {
+func (h TransportManagerTransportHandler) OnFailed(isShortLived bool, iceConnectionInfo *types.ICEConnectionInfo) {
 	h.t.handleConnectionFailed(isShortLived)
-	h.Handler.OnFailed(isShortLived)
+	h.Handler.OnFailed(isShortLived, iceConnectionInfo)
 }
 
 type TransportManagerPublisherTransportHandler struct {
@@ -693,7 +693,7 @@ func (t *TransportManager) onMediaLossUpdate(loss uint8) {
 				t.lock.Unlock()
 
 				t.params.Logger.Infow("udp connection unstable, switch to tcp", "signalingRTT", t.signalingRTT)
-				t.params.SubscriberHandler.OnFailed(true)
+				t.params.SubscriberHandler.OnFailed(true, t.subscriber.GetICEConnectionInfo())
 				return
 			}
 		}
