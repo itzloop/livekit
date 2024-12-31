@@ -81,6 +81,12 @@ func (t *telemetryService) TrackStats(key StatsKey, stat *livekit.AnalyticsStat)
 				prometheus.RecordPacketOutOfOrder(direction, key.trackSource, key.trackType, stream.PacketsOutOfOrder, stream.PrimaryPackets+stream.PaddingPackets, key.Addr)
 				prometheus.RecordRTT(direction, key.trackSource, key.trackType, stream.Rtt, key.Addr)
 				prometheus.RecordJitter(direction, key.trackSource, key.trackType, stream.Jitter, key.Addr)
+
+				delta := stream.GetEndTime().AsTime().Sub(stream.GetStartTime().AsTime()).Seconds()
+				if delta != 0 {
+					bRate := float64(bytes) / delta
+					prometheus.IncrementByteRate(direction, key.trackSource, key.trackType, uint64(bRate), key.Addr)
+				}
 			}
 		}
 		prometheus.IncrementRTCP(direction, nacks, plis, firs)

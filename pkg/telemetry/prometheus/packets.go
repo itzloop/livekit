@@ -48,7 +48,8 @@ var (
 	forwardJitter              atomic.Uint32
 
 	// Custom
-	promAsnBytes *prometheus.CounterVec
+	promAsnBytes    *prometheus.CounterVec
+	promAsnByteRate *prometheus.HistogramVec
 
 	promPacketLabels          = []string{"direction", "transmission"}
 	promPacketTotal           *prometheus.CounterVec
@@ -184,6 +185,14 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 		Name:        "bytes",
 		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
 	}, []string{"asn", "direction"})
+	promAsnByteRate = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "asn",
+		Name:        "byterate",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
+
+		Buckets: []float64{1000, 10000, 30000, 50000, 70000, 100000, 300000, 600000, 1000000, 2000000, 4000000, 8000000},
+	}, promStreamLabels)
 
 	prometheus.MustRegister(promPacketTotal)
 	prometheus.MustRegister(promPacketBytes)
@@ -201,6 +210,7 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 	prometheus.MustRegister(promForwardLatency)
 	prometheus.MustRegister(promForwardJitter)
 	prometheus.MustRegister(promAsnBytes)
+	prometheus.MustRegister(promAsnByteRate)
 
 	promPacketTotalIncomingInitial = promPacketTotal.WithLabelValues(string(Incoming), transmissionInitial)
 	promPacketTotalIncomingRetransmit = promPacketTotal.WithLabelValues(string(Incoming), transmissionRetransmit)
@@ -236,6 +246,12 @@ func IncrementByteWithAsn(direction Direction, count uint64, address string) {
 	res := getASN(address)
 
 	promAsnBytes.WithLabelValues(res, string(direction)).Add(float64(count))
+}
+
+func IncrementByteRate(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, count uint64, address string) {
+	res := getASN(address)
+
+	promAsnByteRate.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(count))
 }
 
 func IncrementPackets(direction Direction, count uint64, retransmit bool) {
