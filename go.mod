@@ -31,6 +31,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/ory/dockertest/v3 v3.11.0
+	github.com/oschwald/geoip2-golang v1.11.0
 	github.com/pion/datachannel v1.5.10
 	github.com/pion/dtls/v3 v3.0.4
 	github.com/pion/ice/v4 v4.0.7
@@ -112,6 +113,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/opencontainers/runc v1.1.14 // indirect
 	github.com/pion/logging v0.2.3 // indirect
+	github.com/oschwald/maxminddb-golang v1.13.0 // indirect
 	github.com/pion/mdns/v2 v2.0.7 // indirect
 	github.com/pion/randutil v0.1.0 // indirect
 	github.com/pion/srtp/v3 v3.0.4 // indirect
