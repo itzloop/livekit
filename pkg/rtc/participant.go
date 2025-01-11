@@ -1641,8 +1641,8 @@ func (p *ParticipantImpl) setupSubscriptionManager() {
 		SubscriptionLimitVideo:   p.params.SubscriptionLimitVideo,
 		SubscriptionLimitAudio:   p.params.SubscriptionLimitAudio,
 		UseOneShotSignallingMode: p.params.UseOneShotSignallingMode,
-		StreamRoom:             p.params.StreamRoom,
-		StreamerIdentity:       p.params.StreamerIdentity,
+		StreamRoom:               p.params.StreamRoom,
+		StreamerIdentity:         p.params.StreamerIdentity,
 	})
 }
 
@@ -1717,7 +1717,7 @@ func (p *ParticipantImpl) updateState(state livekit.ParticipantInfo_State) {
 		found := false
 		for _, detail := range p.TransportManager.GetICEConnectionInfo() {
 			for _, candidate := range detail.Remote {
-				if candidate.Selected {
+				if candidate.SelectedOrder != 0 {
 					addr = candidate.Remote.Address()
 					found = true
 				}
@@ -2048,7 +2048,7 @@ func (p *ParticipantImpl) onPrimaryTransportFullyEstablished() {
 		var addr string
 		for _, detail := range p.TransportManager.GetICEConnectionInfo() {
 			for _, candidate := range detail.Remote {
-				if candidate.Selected {
+				if candidate.SelectedOrder != 0 {
 					addr = candidate.Remote.Address()
 				}
 			}

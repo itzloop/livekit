@@ -212,7 +212,7 @@ func (t *MediaTrackSubscriptions) AddSubscriber(sub types.LocalParticipant, wr *
 		var addr string
 		for _, detail := range sub.GetICEConnectionInfo() {
 			for _, candidate := range detail.Remote {
-				if candidate.Selected {
+				if candidate.SelectedOrder != 0 {
 					addr = candidate.Remote.Address()
 				}
 			}
