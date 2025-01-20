@@ -46,14 +46,6 @@ func registerCodecs(me *webrtc.MediaEngine, codecs []*livekit.Codec, rtcpFeedbac
 	opusCodec.RTCPFeedback = rtcpFeedback.Audio
 	var opusPayload webrtc.PayloadType
 	if IsCodecEnabled(codecs, opusCodec) {
-		opusPayload = 111
-		if err := me.RegisterCodec(webrtc.RTPCodecParameters{
-			RTPCodecCapability: opusCodec,
-			PayloadType:        opusPayload,
-		}, webrtc.RTPCodecTypeAudio); err != nil {
-			return err
-		}
-
 		if IsCodecEnabled(codecs, RedCodecCapability) {
 			if err := me.RegisterCodec(webrtc.RTPCodecParameters{
 				RTPCodecCapability: RedCodecCapability,
@@ -61,6 +53,14 @@ func registerCodecs(me *webrtc.MediaEngine, codecs []*livekit.Codec, rtcpFeedbac
 			}, webrtc.RTPCodecTypeAudio); err != nil {
 				return err
 			}
+		}
+
+		opusPayload = 111
+		if err := me.RegisterCodec(webrtc.RTPCodecParameters{
+			RTPCodecCapability: opusCodec,
+			PayloadType:        opusPayload,
+		}, webrtc.RTPCodecTypeAudio); err != nil {
+			return err
 		}
 	}
 

@@ -84,8 +84,9 @@ func (t *telemetryService) TrackStats(key StatsKey, stat *livekit.AnalyticsStat)
 
 				delta := stream.GetEndTime().AsTime().Sub(stream.GetStartTime().AsTime()).Seconds()
 				if delta != 0 {
-					bRate := float64(bytes) / delta
-					prometheus.IncrementByteRate(direction, key.trackSource, key.trackType, uint64(bRate), key.Addr)
+					if bRate := float64(bytes) / delta; uint64(bRate) != 0 {
+						prometheus.IncrementByteRate(direction, key.trackSource, key.trackType, uint64(bRate), key.Addr)
+					}
 				}
 			}
 		}

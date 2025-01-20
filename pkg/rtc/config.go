@@ -91,6 +91,7 @@ func NewWebRTCConfig(conf *config.Config) (*WebRTCConfig, error) {
 				sdp.SDESRTPStreamIDURI,
 				sdp.AudioLevelURI,
 				//act.AbsCaptureTimeURI,
+				sdp.ABSSendTimeURI,
 			},
 			Video: []string{
 				sdp.SDESMidURI,
@@ -100,6 +101,7 @@ func NewWebRTCConfig(conf *config.Config) (*WebRTCConfig, error) {
 				dd.ExtensionURI,
 				repairedRTPStreamID,
 				//act.AbsCaptureTimeURI,
+				sdp.ABSSendTimeURI,
 			},
 		},
 		RTCPFeedback: RTCPFeedbackConfig{
@@ -141,9 +143,11 @@ func getSubscriberConfig(enableTWCC bool) DirectionConfig {
 			Video: []string{
 				dd.ExtensionURI,
 				//act.AbsCaptureTimeURI,
+				sdp.ABSSendTimeURI,
 			},
 			Audio: []string{
 				//act.AbsCaptureTimeURI,
+				sdp.ABSSendTimeURI,
 			},
 		},
 		RTCPFeedback: RTCPFeedbackConfig{
