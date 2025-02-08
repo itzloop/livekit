@@ -48,14 +48,30 @@ var (
 	forwardJitter              atomic.Uint32
 
 	// Custom
-	promAsnBytes    *prometheus.CounterVec
-	promAsnByteRate *prometheus.HistogramVec
+	promAsnBytes                 *prometheus.CounterVec
+	promAsnByteRate              *prometheus.HistogramVec
+	promPacketLossTotalASN       *prometheus.CounterVec
+	promPacketLossASN            *prometheus.HistogramVec
+	promPacketOutOfOrderTotalASN *prometheus.CounterVec
+	promPacketOutOfOrderASN      *prometheus.HistogramVec
+	promNackTotalASN             *prometheus.CounterVec
+	promPliTotalASN              *prometheus.CounterVec
+	promJitterASN                *prometheus.HistogramVec
+	promRTTASN                   *prometheus.HistogramVec
+
+	promPacketTotalASN *prometheus.CounterVec
+	promPacketBytesASN *prometheus.CounterVec
+
+	// end custom
 
 	promPacketLabels          = []string{"direction", "transmission"}
+	promPacketASNLabels       = []string{"direction", "transmission", "asn"}
 	promPacketTotal           *prometheus.CounterVec
 	promPacketBytes           *prometheus.CounterVec
 	promRTCPLabels            = []string{"direction"}
-	promStreamLabels          = []string{"direction", "source", "type", "asn"}
+	promRTCPASNLabels         = []string{"direction", "asn"}
+	promStreamLabels          = []string{"direction", "source", "type"}
+	promStreamASNLabels       = []string{"direction", "source", "type", "asn"}
 	promNackTotal             *prometheus.CounterVec
 	promPliTotal              *prometheus.CounterVec
 	promFirTotal              *prometheus.CounterVec
@@ -179,6 +195,7 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 		Name:        "jitter",
 		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
 	})
+	// customs //
 	promAsnBytes = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace:   livekitNamespace,
 		Subsystem:   "asn",
@@ -192,7 +209,73 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
 
 		Buckets: []float64{1000, 10000, 30000, 50000, 70000, 100000, 300000, 600000, 1000000, 2000000, 4000000, 8000000},
-	}, promStreamLabels)
+	}, promStreamASNLabels)
+	promPacketTotalASN = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "packet_asn",
+		Name:        "total",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
+	}, promPacketASNLabels)
+	promPacketBytesASN = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "packet_asn",
+		Name:        "bytes",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
+	}, promPacketASNLabels)
+	promPacketLossTotalASN = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "packet_loss_asn",
+		Name:        "total",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
+	}, promStreamASNLabels)
+	promPacketLossASN = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "packet_loss_asn",
+		Name:        "percent",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
+		Buckets:     []float64{0.0, 0.1, 0.3, 0.5, 0.7, 1, 5, 10, 40, 100},
+	}, promStreamASNLabels)
+	promPacketOutOfOrderTotalASN = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "packet_out_of_order_asn",
+		Name:        "total",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
+	}, promStreamASNLabels)
+	promPacketOutOfOrderASN = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "packet_out_of_order_asn",
+		Name:        "percent",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
+		Buckets:     []float64{0.0, 0.1, 0.3, 0.5, 0.7, 1, 5, 10, 40, 100},
+	}, promStreamASNLabels)
+	promNackTotalASN = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "nack_asn",
+		Name:        "total",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
+	}, promRTCPASNLabels)
+	promPliTotalASN = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "pli_asn",
+		Name:        "total",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
+	}, promRTCPASNLabels)
+	promJitterASN = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "jitter_asn",
+		Name:        "us",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
+
+		// 1ms, 10ms, 30ms, 50ms, 70ms, 100ms, 300ms, 600ms, 1s
+		Buckets: []float64{1000, 10000, 30000, 50000, 70000, 100000, 300000, 600000, 1000000},
+	}, promStreamASNLabels)
+	promRTTASN = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "rtt_asn",
+		Name:        "ms",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
+		Buckets:     []float64{50, 100, 150, 200, 250, 500, 750, 1000, 5000, 10000},
+	}, promStreamASNLabels)
 
 	prometheus.MustRegister(promPacketTotal)
 	prometheus.MustRegister(promPacketBytes)
@@ -211,6 +294,15 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 	prometheus.MustRegister(promForwardJitter)
 	prometheus.MustRegister(promAsnBytes)
 	prometheus.MustRegister(promAsnByteRate)
+	prometheus.MustRegister(promPacketLossTotalASN)
+	prometheus.MustRegister(promPacketLossASN)
+	prometheus.MustRegister(promPacketOutOfOrderTotalASN)
+	prometheus.MustRegister(promNackTotalASN)
+	prometheus.MustRegister(promPliTotalASN)
+	prometheus.MustRegister(promJitterASN)
+	prometheus.MustRegister(promRTTASN)
+	prometheus.MustRegister(promPacketBytesASN)
+	prometheus.MustRegister(promPacketTotalASN)
 
 	promPacketTotalIncomingInitial = promPacketTotal.WithLabelValues(string(Incoming), transmissionInitial)
 	promPacketTotalIncomingRetransmit = promPacketTotal.WithLabelValues(string(Incoming), transmissionRetransmit)
@@ -254,18 +346,32 @@ func IncrementByteRate(direction Direction, trackSource livekit.TrackSource, tra
 	promAsnByteRate.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(count))
 }
 
-func IncrementPackets(direction Direction, count uint64, retransmit bool) {
+func IncrementPackets(direction Direction, count uint64, retransmit bool, address string) {
+	res := getASN(address)
+
 	if direction == Incoming {
 		if retransmit {
 			promPacketTotalIncomingRetransmit.Add(float64(count))
+			if address != "" {
+				promPacketTotalASN.WithLabelValues(string(Incoming), transmissionRetransmit, res).Add(float64(count))
+			}
 		} else {
 			promPacketTotalIncomingInitial.Add(float64(count))
+			if address != "" {
+				promPacketTotalASN.WithLabelValues(string(Incoming), transmissionInitial, res).Add(float64(count))
+			}
 		}
 	} else {
 		if retransmit {
 			promPacketTotalOutgoingRetransmit.Add(float64(count))
+			if address != "" {
+				promPacketTotalASN.WithLabelValues(string(Outgoing), transmissionRetransmit, res).Add(float64(count))
+			}
 		} else {
 			promPacketTotalOutgoingInitial.Add(float64(count))
+			if address != "" {
+				promPacketTotalASN.WithLabelValues(string(Outgoing), transmissionInitial, res).Add(float64(count))
+			}
 		}
 	}
 
@@ -279,18 +385,32 @@ func IncrementPackets(direction Direction, count uint64, retransmit bool) {
 	}
 }
 
-func IncrementBytes(direction Direction, count uint64, retransmit bool) {
+func IncrementBytes(direction Direction, count uint64, retransmit bool, address string) {
+	res := getASN(address)
+
 	if direction == Incoming {
 		if retransmit {
 			promPacketBytesIncomingRetransmit.Add(float64(count))
+			if address != "" {
+				promPacketBytesASN.WithLabelValues(string(Incoming), transmissionRetransmit, res).Add(float64(count))
+			}
 		} else {
 			promPacketBytesIncomingInitial.Add(float64(count))
+			if address != "" {
+				promPacketBytesASN.WithLabelValues(string(Incoming), transmissionInitial, res).Add(float64(count))
+			}
 		}
 	} else {
 		if retransmit {
 			promPacketBytesOutgoingRetransmit.Add(float64(count))
+			if address != "" {
+				promPacketBytesASN.WithLabelValues(string(Outgoing), transmissionRetransmit, res).Add(float64(count))
+			}
 		} else {
 			promPacketBytesOutgoingInitial.Add(float64(count))
+			if address != "" {
+				promPacketBytesASN.WithLabelValues(string(Outgoing), transmissionInitial, res).Add(float64(count))
+			}
 		}
 	}
 
@@ -304,13 +424,17 @@ func IncrementBytes(direction Direction, count uint64, retransmit bool) {
 	}
 }
 
-func IncrementRTCP(direction Direction, nack, pli, fir uint32) {
+func IncrementRTCP(direction Direction, nack, pli, fir uint32, address string) {
+	res := getASN(address)
+
 	if nack > 0 {
 		promNackTotal.WithLabelValues(string(direction)).Add(float64(nack))
+		promNackTotalASN.WithLabelValues(string(direction), res).Add(float64(nack))
 		nackTotal.Add(uint64(nack))
 	}
 	if pli > 0 {
 		promPliTotal.WithLabelValues(string(direction)).Add(float64(pli))
+		promPliTotalASN.WithLabelValues(string(direction), res).Add(float64(pli))
 	}
 	if fir > 0 {
 		promFirTotal.WithLabelValues(string(direction)).Add(float64(fir))
@@ -321,10 +445,12 @@ func RecordPacketLoss(direction Direction, trackSource livekit.TrackSource, trac
 	res := getASN(address)
 
 	if total > 0 {
-		promPacketLoss.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(lost) / float64(total) * 100)
+		promPacketLoss.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Observe(float64(lost) / float64(total) * 100)
+		promPacketLossASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(lost) / float64(total) * 100)
 	}
 	if lost > 0 {
-		promPacketLossTotal.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Add(float64(lost))
+		promPacketLossTotal.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Add(float64(lost))
+		promPacketLossTotalASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Add(float64(lost))
 	}
 }
 
@@ -332,10 +458,12 @@ func RecordPacketOutOfOrder(direction Direction, trackSource livekit.TrackSource
 	res := getASN(address)
 
 	if total > 0 {
-		promPacketOutOfOrder.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(ooo) / float64(total) * 100)
+		promPacketOutOfOrder.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Observe(float64(ooo) / float64(total) * 100)
+		promPacketOutOfOrderASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(ooo) / float64(total) * 100)
 	}
 	if ooo > 0 {
-		promPacketOutOfOrderTotal.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Add(float64(ooo))
+		promPacketOutOfOrderTotal.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Add(float64(ooo))
+		promPacketOutOfOrderTotalASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Add(float64(ooo))
 	}
 }
 
@@ -343,7 +471,8 @@ func RecordJitter(direction Direction, trackSource livekit.TrackSource, trackTyp
 	res := getASN(address)
 
 	if jitter > 0 {
-		promJitter.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(jitter))
+		promJitter.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Observe(float64(jitter))
+		promJitterASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(jitter))
 	}
 }
 
@@ -351,7 +480,8 @@ func RecordRTT(direction Direction, trackSource livekit.TrackSource, trackType l
 	res := getASN(address)
 
 	if rtt > 0 {
-		promRTT.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(rtt))
+		promRTT.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Observe(float64(rtt))
+		promRTTASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(rtt))
 	}
 }
 
