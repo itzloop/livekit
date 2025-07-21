@@ -82,7 +82,7 @@ const (
 
 	shortConnectionThreshold = 90 * time.Second
 
-	dataChannelBufferSize = 65535
+	dataChannelBufferSize       = 65535
 	defaultLiteModeAudioBitrate = 20
 	defaultLiteModeVideoBitrate = 50
 )
@@ -278,7 +278,7 @@ type TransportParams struct {
 
 	// for development test
 	DatachannelMaxReceiverBufferSize int
-	LiteModeTransportConfig      LiteModeTransportConfig
+	LiteModeTransportConfig          LiteModeTransportConfig
 }
 
 type LiteModeTransportConfig struct {
@@ -2363,13 +2363,13 @@ func (t *PCTransport) createAndSendAnswer() error {
 
 func (t *PCTransport) overwriteBitrate(sd webrtc.SessionDescription) webrtc.SessionDescription {
 	if !t.params.LiteModeTransportConfig.IsLiteMode {
-		t.params.Logger.Debugw("not lite mode", "participant", t.params.ParticipantIdentity)
+		t.params.Logger.Debugw("not lite mode")
 		return sd
 	}
 
 	parsed, err := sd.Unmarshal()
 	if err != nil {
-        t.params.Logger.Debugw("failed to unmarshal sd", "spot", "overwriteBitrate")
+		t.params.Logger.Debugw("failed to unmarshal sd", "spot", "overwriteBitrate")
 		return sd
 	}
 
@@ -2395,7 +2395,7 @@ func (t *PCTransport) overwriteBitrate(sd webrtc.SessionDescription) webrtc.Sess
 
 	newAnswer, err := parsed.Marshal()
 	if err != nil {
-        t.params.Logger.Debugw("failed to marshal sd", "spot", "overwriteBitrate")
+		t.params.Logger.Debugw("failed to marshal sd", "spot", "overwriteBitrate")
 		return sd
 	}
 
