@@ -15,14 +15,13 @@
 package prometheus
 
 import (
-	"github.com/livekit/protocol/logger"
-	"net"
 	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/atomic"
 
+	"github.com/livekit/livekit-server/pkg/geoip"
 	"github.com/livekit/protocol/livekit"
 )
 
@@ -232,15 +231,7 @@ func RecordTrackSubscribeFailure(err error, isUserError bool) {
 }
 
 func RecordSessionStartTime(protocolVersion int, d time.Duration, address string) {
-	asn := "unknown"
-	if asnReader != nil {
-		data, err := asnReader.ASN(net.ParseIP(address))
-		if err != nil {
-			logger.Infow("Failed to get asn data", err)
-		} else {
-			asn = data.AutonomousSystemOrganization
-		}
-	}
+	asn := geoip.GetASOrganization(address)
 	promSessionStartTime.WithLabelValues(strconv.Itoa(protocolVersion)).Observe(float64(d.Milliseconds()))
 	promSessionStartTimePerAsn.WithLabelValues(strconv.Itoa(protocolVersion), asn).Observe(float64(d.Milliseconds()))
 }

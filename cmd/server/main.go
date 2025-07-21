@@ -27,6 +27,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/livekit/livekit-server/pkg/geoip"
 	"github.com/livekit/livekit-server/pkg/rtc"
 	"github.com/livekit/livekit-server/pkg/telemetry/prometheus"
 	"github.com/livekit/protocol/logger"
@@ -269,6 +270,10 @@ func startServer(c *cli.Context) error {
 
 	currentNode, err := routing.NewLocalNode(conf)
 	if err != nil {
+		return err
+	}
+
+	if err := geoip.Init(conf.GeoIP); err != nil {
 		return err
 	}
 

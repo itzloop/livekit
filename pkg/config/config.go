@@ -26,6 +26,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 
+	"github.com/livekit/livekit-server/pkg/geoip"
 	"github.com/livekit/livekit-server/pkg/metric"
 	"github.com/livekit/livekit-server/pkg/sfu"
 	"github.com/livekit/livekit-server/pkg/sfu/bwe/remotebwe"
@@ -77,6 +78,7 @@ type Config struct {
 	Development bool `yaml:"development,omitempty"`
 
 	Metric metric.MetricConfig `yaml:"metric,omitempty"`
+	GeoIP  geoip.Config               `yaml:"geoip,omitempty"`
 }
 
 type RTCConfig struct {

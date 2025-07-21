@@ -41,6 +41,7 @@ import (
 	"github.com/livekit/protocol/utils/xtwirp"
 
 	"github.com/livekit/livekit-server/pkg/config"
+	"github.com/livekit/livekit-server/pkg/geoip"
 	"github.com/livekit/livekit-server/pkg/routing"
 	"github.com/livekit/livekit-server/version"
 )
@@ -320,6 +321,8 @@ func (s *LivekitServer) Stop(force bool) {
 		waitingForParticipants = s.roomManager.HasParticipants()
 	}
 	partTicker.Stop()
+
+	geoip.Close()
 
 	if !s.running.Swap(false) {
 		return

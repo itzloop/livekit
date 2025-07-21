@@ -15,13 +15,11 @@
 package prometheus
 
 import (
-	"errors"
+	"github.com/livekit/livekit-server/pkg/geoip"
 	"github.com/livekit/protocol/livekit"
-	"github.com/livekit/protocol/logger"
-	"github.com/oschwald/geoip2-golang"
+	"github.com/oschwald/geoip2-golang/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/atomic"
-	"net"
 )
 
 type Direction string
@@ -312,42 +310,22 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 	promPacketBytesIncomingRetransmit = promPacketBytes.WithLabelValues(string(Incoming), transmissionRetransmit)
 	promPacketBytesOutgoingInitial = promPacketBytes.WithLabelValues(string(Outgoing), transmissionInitial)
 	promPacketBytesOutgoingRetransmit = promPacketBytes.WithLabelValues(string(Outgoing), transmissionRetransmit)
-
-	var err error
-	asnReader, err = geoip2.Open("/opt/maxmind/geoip.db")
-	if err != nil {
-		logger.Errorw("Failed to read geoData", err)
-	}
-}
-
-func getASN(address string) string {
-	if asnReader == nil {
-		logger.Infow("Nil asnReader, metrics are being lost", errors.New("nil asn reader"))
-		return "unavailable"
-	}
-
-	res, err := asnReader.ASN(net.ParseIP(address))
-	if err != nil {
-		logger.Infow("failed to get asn for ip "+address, err)
-		return "unknown"
-	}
-	return res.AutonomousSystemOrganization
 }
 
 func IncrementByteWithAsn(direction Direction, count uint64, address string) {
-	res := getASN(address)
+	res := geoip.GetASOrganization(address)
 
 	promAsnBytes.WithLabelValues(res, string(direction)).Add(float64(count))
 }
 
 func IncrementByteRate(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, count uint64, address string) {
-	res := getASN(address)
+	res := geoip.GetASOrganization(address)
 
 	promAsnByteRate.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(count))
 }
 
 func IncrementPackets(direction Direction, count uint64, retransmit bool, address string) {
-	res := getASN(address)
+	res := geoip.GetASOrganization(address)
 
 	if direction == Incoming {
 		if retransmit {
@@ -386,7 +364,7 @@ func IncrementPackets(direction Direction, count uint64, retransmit bool, addres
 }
 
 func IncrementBytes(direction Direction, count uint64, retransmit bool, address string) {
-	res := getASN(address)
+	res := geoip.GetASOrganization(address)
 
 	if direction == Incoming {
 		if retransmit {
@@ -425,7 +403,7 @@ func IncrementBytes(direction Direction, count uint64, retransmit bool, address 
 }
 
 func IncrementRTCP(direction Direction, nack, pli, fir uint32, address string) {
-	res := getASN(address)
+	res := geoip.GetASOrganization(address)
 
 	if nack > 0 {
 		promNackTotal.WithLabelValues(string(direction)).Add(float64(nack))
@@ -442,7 +420,7 @@ func IncrementRTCP(direction Direction, nack, pli, fir uint32, address string) {
 }
 
 func RecordPacketLoss(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, lost, total uint32, address string) {
-	res := getASN(address)
+	res := geoip.GetASOrganization(address)
 
 	if total > 0 {
 		promPacketLoss.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Observe(float64(lost) / float64(total) * 100)
@@ -455,7 +433,7 @@ func RecordPacketLoss(direction Direction, trackSource livekit.TrackSource, trac
 }
 
 func RecordPacketOutOfOrder(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, ooo, total uint32, address string) {
-	res := getASN(address)
+	res := geoip.GetASOrganization(address)
 
 	if total > 0 {
 		promPacketOutOfOrder.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Observe(float64(ooo) / float64(total) * 100)
@@ -468,7 +446,7 @@ func RecordPacketOutOfOrder(direction Direction, trackSource livekit.TrackSource
 }
 
 func RecordJitter(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, jitter uint32, address string) {
-	res := getASN(address)
+	res := geoip.GetASOrganization(address)
 
 	if jitter > 0 {
 		promJitter.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Observe(float64(jitter))
@@ -477,7 +455,7 @@ func RecordJitter(direction Direction, trackSource livekit.TrackSource, trackTyp
 }
 
 func RecordRTT(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, rtt uint32, address string) {
-	res := getASN(address)
+	res := geoip.GetASOrganization(address)
 
 	if rtt > 0 {
 		promRTT.WithLabelValues(string(direction), trackSource.String(), trackType.String()).Observe(float64(rtt))
