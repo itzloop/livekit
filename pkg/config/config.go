@@ -32,12 +32,14 @@ import (
 	"github.com/livekit/livekit-server/pkg/sfu/bwe/remotebwe"
 	"github.com/livekit/livekit-server/pkg/sfu/bwe/sendsidebwe"
 	"github.com/livekit/livekit-server/pkg/sfu/mime"
+	"github.com/livekit/livekit-server/pkg/sfu/pacer"
 	"github.com/livekit/livekit-server/pkg/sfu/streamallocator"
 	"github.com/livekit/mediatransportutil/pkg/rtcconfig"
 	"github.com/livekit/protocol/livekit"
 	"github.com/livekit/protocol/logger"
 	redisLiveKit "github.com/livekit/protocol/redis"
 	"github.com/livekit/protocol/rpc"
+	"github.com/livekit/protocol/webhook"
 )
 
 const (
@@ -63,7 +65,7 @@ type Config struct {
 	TURN           TURNConfig               `yaml:"turn,omitempty"`
 	Ingress        IngressConfig            `yaml:"ingress,omitempty"`
 	SIP            SIPConfig                `yaml:"sip,omitempty"`
-	WebHook        WebHookConfig            `yaml:"webhook,omitempty"`
+	WebHook        webhook.WebHookConfig    `yaml:"webhook,omitempty"`
 	NodeSelector   NodeSelectorConfig       `yaml:"node_selector,omitempty"`
 	KeyFile        string                   `yaml:"key_file,omitempty"`
 	Keys           map[string]string        `yaml:"keys,omitempty"`
@@ -77,8 +79,10 @@ type Config struct {
 
 	Development bool `yaml:"development,omitempty"`
 
-	Metric metric.MetricConfig `yaml:"metric,omitempty"`
-	GeoIP  geoip.Config               `yaml:"geoip,omitempty"`
+	Metric    metric.MetricConfig `yaml:"metric,omitempty"`
+	NodeStats NodeStatsConfig     `yaml:"node_stats,omitempty"`
+
+	GeoIP geoip.Config `yaml:"geoip,omitempty"`
 }
 
 type RTCConfig struct {
@@ -141,8 +145,9 @@ type CongestionControlConfig struct {
 
 	UseSendSideBWEInterceptor bool `yaml:"use_send_side_bwe_interceptor,omitempty"`
 
-	UseSendSideBWE bool                          `yaml:"use_send_side_bwe,omitempty"`
-	SendSideBWE    sendsidebwe.SendSideBWEConfig `yaml:"send_side_bwe,omitempty"`
+	UseSendSideBWE   bool                          `yaml:"use_send_side_bwe,omitempty"`
+	SendSideBWEPacer string                        `yaml:"send_side_bwe_pacer,omitempty"`
+	SendSideBWE      sendsidebwe.SendSideBWEConfig `yaml:"send_side_bwe,omitempty"`
 }
 
 type PlayoutDelayConfig struct {
@@ -154,6 +159,8 @@ type PlayoutDelayConfig struct {
 type VideoConfig struct {
 	DynacastPauseDelay   time.Duration                  `yaml:"dynacast_pause_delay,omitempty"`
 	StreamTrackerManager sfu.StreamTrackerManagerConfig `yaml:"stream_tracker_manager,omitempty"`
+
+	CodecRegressionThreshold int `yaml:"codec_regression_threshold,omitempty"`
 }
 
 type RoomConfig struct {
@@ -198,12 +205,6 @@ type TURNConfig struct {
 	RelayPortRangeStart uint16 `yaml:"relay_range_start,omitempty"`
 	RelayPortRangeEnd   uint16 `yaml:"relay_range_end,omitempty"`
 	ExternalTLS         bool   `yaml:"external_tls,omitempty"`
-}
-
-type WebHookConfig struct {
-	URLs []string `yaml:"urls,omitempty"`
-	// key to use for webhook
-	APIKey string `yaml:"api_key,omitempty"`
 }
 
 type NodeSelectorConfig struct {
@@ -305,6 +306,18 @@ func DefaultAPIConfig() APIConfig {
 	}
 }
 
+type NodeStatsConfig struct {
+	StatsUpdateInterval           time.Duration   `yaml:"stats_update_interval,omitempty"`
+	StatsRateMeasurementIntervals []time.Duration `yaml:"stats_rate_measurement_intervals,omitempty"`
+	StatsMaxDelay                 time.Duration   `yaml:"stats_max_delay,omitempty"`
+}
+
+var DefaultNodeStatsConfig = NodeStatsConfig{
+	StatsUpdateInterval:           2 * time.Second,
+	StatsRateMeasurementIntervals: []time.Duration{10 * time.Second},
+	StatsMaxDelay:                 30 * time.Second,
+}
+
 var DefaultConfig = Config{
 	Port: 7880,
 	RTC: RTCConfig{
@@ -326,13 +339,15 @@ var DefaultConfig = Config{
 			RemoteBWE:                 remotebwe.DefaultRemoteBWEConfig,
 			UseSendSideBWEInterceptor: false,
 			UseSendSideBWE:            false,
+			SendSideBWEPacer:          string(pacer.PacerBehaviorNoQueue),
 			SendSideBWE:               sendsidebwe.DefaultSendSideBWEConfig,
 		},
 	},
 	Audio: sfu.DefaultAudioConfig,
 	Video: VideoConfig{
-		DynacastPauseDelay:   5 * time.Second,
-		StreamTrackerManager: sfu.DefaultStreamTrackerManagerConfig,
+		DynacastPauseDelay:       5 * time.Second,
+		StreamTrackerManager:     sfu.DefaultStreamTrackerManagerConfig,
+		CodecRegressionThreshold: 5,
 	},
 	Redis: redisLiveKit.RedisConfig{},
 	Room: RoomConfig{
@@ -378,9 +393,11 @@ var DefaultConfig = Config{
 		StreamBufferSize: 1000,
 		ConnectAttempts:  3,
 	},
-	PSRPC:  rpc.DefaultPSRPCConfig,
-	Keys:   map[string]string{},
-	Metric: metric.DefaultMetricConfig,
+	PSRPC:     rpc.DefaultPSRPCConfig,
+	Keys:      map[string]string{},
+	Metric:    metric.DefaultMetricConfig,
+	WebHook:   webhook.DefaultWebHookConfig,
+	NodeStats: DefaultNodeStatsConfig,
 }
 
 func NewConfig(confString string, strictMode bool, c *cli.Context, baseFlags []cli.Flag) (*Config, error) {
