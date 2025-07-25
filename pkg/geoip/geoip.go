@@ -3,10 +3,12 @@ package geoip
 import (
 	"fmt"
 	"net/netip"
+	"slices"
 	"sync/atomic"
 
 	"github.com/livekit/protocol/logger"
 	"github.com/oschwald/geoip2-golang/v2"
+	"github.com/pion/webrtc/v4"
 )
 
 var (
@@ -85,4 +87,53 @@ func GetASOrganization(address string) string {
 	}
 
 	return record.Traits.AutonomousSystemOrganization
+}
+
+func GetASOrganizationFromPeerConnection(pc *webrtc.PeerConnection) string {
+	var (
+		rtcASN                    string
+		s                         = pc.GetStats()
+		nominatedRemoteCandidates []webrtc.ICECandidateStats
+	)
+	for _, report := range s {
+		switch r := report.(type) {
+		case webrtc.ICECandidatePairStats:
+			if r.State != webrtc.StatsICECandidatePairStateSucceeded {
+				continue
+			}
+
+			// TODO: is considering the first nominated pair correct?
+			if !r.Nominated {
+				continue
+			}
+
+			remoteCandidate, ok := s[r.RemoteCandidateID]
+			if !ok {
+				continue
+			}
+
+			switch v := remoteCandidate.(type) {
+			case webrtc.ICECandidateStats:
+				nominatedRemoteCandidates = append(nominatedRemoteCandidates, v)
+			}
+		}
+	}
+
+	// sort desc based on priority if there are multiple nominated paris
+	// The highest priority wins
+	slices.SortFunc(nominatedRemoteCandidates, func(a, b webrtc.ICECandidateStats) int {
+		if a.Priority > b.Priority {
+			return -1
+		} else if a.Priority < b.Priority {
+			return 1
+		}
+
+		return 0
+	})
+
+	if len(nominatedRemoteCandidates) > 0 {
+		rtcASN = GetASOrganization(nominatedRemoteCandidates[0].IP)
+	}
+
+	return rtcASN
 }

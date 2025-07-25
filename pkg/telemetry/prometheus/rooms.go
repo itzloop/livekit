@@ -39,6 +39,7 @@ var (
 	trackSubscribeUserError atomic.Int32
 
 	promRoomCurrent            prometheus.Gauge
+	promRoomCurrentWithNodeIP  prometheus.Gauge
 	promRoomDuration           prometheus.Histogram
 	promParticipantCurrent     prometheus.Gauge
 	promTrackPublishedCurrent  *prometheus.GaugeVec
@@ -140,6 +141,17 @@ func initRoomStats(nodeID string, nodeType livekit.NodeType) {
 	prometheus.MustRegister(promSessionDuration)
 	prometheus.MustRegister(promPubSubTime)
 	prometheus.MustRegister(promSessionStartTimePerAsn)
+}
+
+func initRoomStatWithNodeIp(nodeIP, nodeID string, nodeType livekit.NodeType) {
+	promRoomCurrentWithNodeIP = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "room",
+		Name:        "total_with_node_ip",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String(), "node_ip": nodeIP},
+	})
+
+	prometheus.MustRegister(promRoomCurrentWithNodeIP)
 }
 
 func RoomStarted() {

@@ -38,6 +38,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/livekit/livekit-server/pkg/config"
+	"github.com/livekit/livekit-server/pkg/geoip"
 	"github.com/livekit/livekit-server/pkg/rtc/transport"
 	"github.com/livekit/livekit-server/pkg/rtc/types"
 	"github.com/livekit/livekit-server/pkg/sfu/bwe"
@@ -754,6 +755,12 @@ func (t *PCTransport) setConnectedAt(at time.Time) bool {
 	}
 
 	t.firstConnectedAt = at
+
+	var (
+		clientASN = geoip.GetASOrganization(t.params.ClientInfo.GetAddress()) // websocket
+		rtcASN    = geoip.GetASOrganizationFromPeerConnection(t.pc) // ice
+	)
+	prometheus.ServiceOperationCounterWithOperator.WithLabelValues("peer_connection", "success", "", clientASN, rtcASN).Add(1)
 	prometheus.ServiceOperationCounter.WithLabelValues("peer_connection", "success", "").Add(1)
 	t.lock.Unlock()
 	return true
@@ -2200,6 +2207,8 @@ func (t *PCTransport) createAndSendOffer(options *webrtc.OfferOptions) error {
 			return nil
 		}
 
+		clientASN := geoip.GetASOrganization(t.params.ClientInfo.GetAddress())
+		prometheus.ServiceOperationCounterWithOperator.WithLabelValues("offer", "error", "create", clientASN, "").Add(1)
 		prometheus.ServiceOperationCounter.WithLabelValues("offer", "error", "create").Add(1)
 		return errors.Wrap(err, "create offer failed")
 	}
@@ -2217,6 +2226,8 @@ func (t *PCTransport) createAndSendOffer(options *webrtc.OfferOptions) error {
 		}
 
 		prometheus.ServiceOperationCounter.WithLabelValues("offer", "error", "local_description").Add(1)
+		clientASN := geoip.GetASOrganization(t.params.ClientInfo.GetAddress())
+		prometheus.ServiceOperationCounterWithOperator.WithLabelValues("offer", "error", "local_description", clientASN, "").Add(1)
 		return errors.Wrap(err, "setting local description failed")
 	}
 
@@ -2239,10 +2250,14 @@ func (t *PCTransport) createAndSendOffer(options *webrtc.OfferOptions) error {
 	t.setupSignalStateCheckTimer()
 
 	if err := t.params.Handler.OnOffer(offer); err != nil {
+		clientASN := geoip.GetASOrganization(t.params.ClientInfo.GetAddress())
+		prometheus.ServiceOperationCounterWithOperator.WithLabelValues("offer", "error", "write_message", clientASN, "").Add(1)
 		prometheus.ServiceOperationCounter.WithLabelValues("offer", "error", "write_message").Add(1)
 		return errors.Wrap(err, "could not send offer")
 	}
 
+	clientASN := geoip.GetASOrganization(t.params.ClientInfo.GetAddress())
+	prometheus.ServiceOperationCounterWithOperator.WithLabelValues("offer", "success", "", clientASN, "").Add(1)
 	prometheus.ServiceOperationCounter.WithLabelValues("offer", "success", "").Add(1)
 	return t.localDescriptionSent()
 }
@@ -2293,6 +2308,8 @@ func (t *PCTransport) setRemoteDescription(sd webrtc.SessionDescription) error {
 		if sd.Type == webrtc.SDPTypeAnswer {
 			sdpType = "answer"
 		}
+		clientASN := geoip.GetASOrganization(t.params.ClientInfo.GetAddress())
+		prometheus.ServiceOperationCounterWithOperator.WithLabelValues(sdpType, "error", "remote_description", clientASN, "").Add(1)
 		prometheus.ServiceOperationCounter.WithLabelValues(sdpType, "error", "remote_description").Add(1)
 		return errors.Wrap(err, "setting remote description failed")
 	} else if sd.Type == webrtc.SDPTypeAnswer {
@@ -2325,6 +2342,8 @@ func (t *PCTransport) createAndSendAnswer() error {
 			return nil
 		}
 
+		clientASN := geoip.GetASOrganization(t.params.ClientInfo.GetAddress())
+		prometheus.ServiceOperationCounterWithOperator.WithLabelValues("answer", "error", "create", clientASN, "").Add(1)
 		prometheus.ServiceOperationCounter.WithLabelValues("answer", "error", "create").Add(1)
 		return errors.Wrap(err, "create answer failed")
 	}
@@ -2335,6 +2354,8 @@ func (t *PCTransport) createAndSendAnswer() error {
 	}
 
 	if err = t.pc.SetLocalDescription(answer); err != nil {
+		clientASN := geoip.GetASOrganization(t.params.ClientInfo.GetAddress())
+		prometheus.ServiceOperationCounterWithOperator.WithLabelValues("answer", "error", "local_description", clientASN, "").Add(1)
 		prometheus.ServiceOperationCounter.WithLabelValues("answer", "error", "local_description").Add(1)
 		return errors.Wrap(err, "setting local description failed")
 	}
@@ -2353,10 +2374,14 @@ func (t *PCTransport) createAndSendAnswer() error {
 	answer = t.overwriteBitrate(answer)
 
 	if err := t.params.Handler.OnAnswer(answer); err != nil {
+		clientASN := geoip.GetASOrganization(t.params.ClientInfo.GetAddress())
+		prometheus.ServiceOperationCounterWithOperator.WithLabelValues("answer", "error", "write_message", clientASN, "").Add(1)
 		prometheus.ServiceOperationCounter.WithLabelValues("answer", "error", "write_message").Add(1)
 		return errors.Wrap(err, "could not send answer")
 	}
 
+	clientASN := geoip.GetASOrganization(t.params.ClientInfo.GetAddress())
+	prometheus.ServiceOperationCounterWithOperator.WithLabelValues("answer", "success", "", clientASN, "").Add(1)
 	prometheus.ServiceOperationCounter.WithLabelValues("answer", "success", "").Add(1)
 	return t.localDescriptionSent()
 }
@@ -2531,8 +2556,12 @@ func (t *PCTransport) doICERestart() error {
 			t.restartAtNextOffer = true
 			err := t.params.Handler.OnOffer(*offer)
 			if err != nil {
+				clientASN := geoip.GetASOrganization(t.params.ClientInfo.GetAddress())
+				prometheus.ServiceOperationCounterWithOperator.WithLabelValues("offer", "error", "write_message", clientASN, "").Add(1)
 				prometheus.ServiceOperationCounter.WithLabelValues("offer", "error", "write_message").Add(1)
 			} else {
+				clientASN := geoip.GetASOrganization(t.params.ClientInfo.GetAddress())
+				prometheus.ServiceOperationCounterWithOperator.WithLabelValues("offer", "success", "", clientASN, "").Add(1)
 				prometheus.ServiceOperationCounter.WithLabelValues("offer", "success", "").Add(1)
 			}
 			return err
@@ -2541,6 +2570,8 @@ func (t *PCTransport) doICERestart() error {
 		// recover by re-applying the last answer
 		t.params.Logger.Infow("recovering from client negotiation state on ICE restart")
 		if err := t.pc.SetRemoteDescription(*currentRemoteDescription); err != nil {
+			clientASN := geoip.GetASOrganization(t.params.ClientInfo.GetAddress())
+			prometheus.ServiceOperationCounterWithOperator.WithLabelValues("offer", "error", "remote_description", clientASN, "").Add(1)
 			prometheus.ServiceOperationCounter.WithLabelValues("offer", "error", "remote_description").Add(1)
 			return errors.Wrap(err, "set remote description failed")
 		} else {

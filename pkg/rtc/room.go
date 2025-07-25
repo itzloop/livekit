@@ -37,6 +37,7 @@ import (
 
 	"github.com/livekit/livekit-server/pkg/agent"
 	"github.com/livekit/livekit-server/pkg/config"
+	"github.com/livekit/livekit-server/pkg/geoip"
 	"github.com/livekit/livekit-server/pkg/routing"
 	"github.com/livekit/livekit-server/pkg/rtc/types"
 	"github.com/livekit/livekit-server/pkg/sfu"
@@ -562,6 +563,8 @@ func (r *Room) Join(participant types.LocalParticipant, requestSource routing.Me
 
 	joinResponse := r.createJoinResponseLocked(participant, iceServers)
 	if err := participant.SendJoinResponse(joinResponse); err != nil {
+		clientASN := geoip.GetASOrganization(participant.GetClientInfo().GetAddress())
+		prometheus.ServiceOperationCounterWithOperator.WithLabelValues("participant_join", "error", "send_response", clientASN, "").Add(1)
 		prometheus.ServiceOperationCounter.WithLabelValues("participant_join", "error", "send_response").Add(1)
 		return err
 	}
@@ -581,6 +584,8 @@ func (r *Room) Join(participant types.LocalParticipant, requestSource routing.Me
 	}
 
 	prometheus.ServiceOperationCounter.WithLabelValues("participant_join", "success", "").Add(1)
+	clientASN := geoip.GetASOrganization(participant.GetClientInfo().GetAddress())
+	prometheus.ServiceOperationCounterWithOperator.WithLabelValues("participant_join", "success", "", clientASN, "").Add(1)
 
 	return nil
 }

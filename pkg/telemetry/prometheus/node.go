@@ -33,10 +33,11 @@ const (
 var (
 	initialized atomic.Bool
 
-	MessageCounter            *prometheus.CounterVec
-	MessageBytes              *prometheus.CounterVec
-	ServiceOperationCounter   *prometheus.CounterVec
-	TwirpRequestStatusCounter *prometheus.CounterVec
+	MessageCounter               *prometheus.CounterVec
+	MessageBytes                 *prometheus.CounterVec
+	ServiceOperationCounter      *prometheus.CounterVec
+	ServiceOperationCounterWithOperator *prometheus.CounterVec
+	TwirpRequestStatusCounter    *prometheus.CounterVec
 
 	sysPacketsStart              uint32
 	sysDroppedPacketsStart       uint32
@@ -82,6 +83,15 @@ func Init(nodeID string, nodeType livekit.NodeType) error {
 		[]string{"type", "status", "error_type"},
 	)
 
+	ServiceOperationCounterWithOperator = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace:   livekitNamespace,
+			Subsystem:   "node",
+			Name:        "service_operation_operator",
+			ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
+		},
+		[]string{"type", "status", "error_type", "client_asn", "rtc_asn"},
+	)
 	TwirpRequestStatusCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace:   livekitNamespace,
@@ -106,6 +116,7 @@ func Init(nodeID string, nodeType livekit.NodeType) error {
 	prometheus.MustRegister(MessageCounter)
 	prometheus.MustRegister(MessageBytes)
 	prometheus.MustRegister(ServiceOperationCounter)
+	prometheus.MustRegister(ServiceOperationCounterWithOperator)
 	prometheus.MustRegister(TwirpRequestStatusCounter)
 	prometheus.MustRegister(promSysPacketGauge)
 
@@ -130,6 +141,11 @@ func Init(nodeID string, nodeType livekit.NodeType) error {
 	}
 
 	return nil
+}
+
+
+func InitWithNodeIP(nodeIP, nodeID string, nodeType livekit.NodeType) {
+	initRoomStatWithNodeIp(nodeIP, nodeID, nodeType)
 }
 
 func GetNodeStats(nodeStartedAt int64, prevStats []*livekit.NodeStats, rateIntervals []time.Duration) (*livekit.NodeStats, error) {
