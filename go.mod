@@ -31,6 +31,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/ory/dockertest/v3 v3.12.0
+	github.com/oschwald/geoip2-golang/v2 v2.0.1
 	github.com/pion/datachannel v1.6.0
 	github.com/pion/dtls/v3 v3.0.10
 	github.com/pion/ice/v4 v4.2.0
@@ -69,6 +70,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3 // indirect
 	github.com/moby/sys/user v0.3.0 // indirect
 	github.com/nyaruka/phonenumbers v1.6.5 // indirect
+	github.com/oschwald/maxminddb-golang/v2 v2.1.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.39.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.39.0 // indirect

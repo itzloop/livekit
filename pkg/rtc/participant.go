@@ -223,6 +223,8 @@ type ParticipantParams struct {
 	EnableDataTracks                bool
 	EnableRTPStreamRestartDetection bool
 	ForceBackupCodecPolicySimulcast bool
+	StreamRoom                     bool
+	StreamerIdentity               string
 }
 
 type ParticipantImpl struct {
@@ -2029,6 +2031,8 @@ func (p *ParticipantImpl) setupSubscriptionManager() {
 		SubscriptionLimitVideo:   p.params.SubscriptionLimitVideo,
 		SubscriptionLimitAudio:   p.params.SubscriptionLimitAudio,
 		UseOneShotSignallingMode: p.params.UseOneShotSignallingMode,
+		StreamRoom:               p.params.StreamRoom,
+		StreamerIdentity:         p.params.StreamerIdentity,
 	})
 }
 
@@ -2537,7 +2541,15 @@ func (p *ParticipantImpl) onPrimaryTransportInitialConnected() {
 	}
 
 	if !p.sessionStartRecorded.Swap(true) {
-		prometheus.RecordSessionStartTime(int(p.ProtocolVersion()), time.Since(p.params.SessionStartTime))
+		var addr string
+		for _, detail := range p.TransportManager.GetICEConnectionInfo() {
+			for _, candidate := range detail.Remote {
+				if candidate.SelectedOrder != 0 {
+					addr = candidate.Remote.Address()
+				}
+			}
+		}
+		prometheus.RecordSessionStartTime(int(p.ProtocolVersion()), time.Since(p.params.SessionStartTime), addr)
 	}
 	p.updateState(livekit.ParticipantInfo_ACTIVE)
 }
