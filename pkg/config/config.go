@@ -16,6 +16,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/livekit/livekit-server/pkg/geoip"
 	"os"
 	"reflect"
 	"strings"
@@ -80,9 +81,10 @@ type Config struct {
 
 	Development bool `yaml:"development,omitempty"`
 
-	Metric metric.MetricConfig `yaml:"metric,omitempty"`
+	Metric    metric.MetricConfig `yaml:"metric,omitempty"`
+	NodeStats NodeStatsConfig     `yaml:"node_stats,omitempty"`
 
-	NodeStats NodeStatsConfig `yaml:"node_stats,omitempty"`
+	GeoIP geoip.Config `yaml:"geoip,omitempty"`
 }
 
 type RTCConfig struct {

@@ -19,6 +19,7 @@ package rtc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -62,6 +63,9 @@ type SubscriptionManagerParams struct {
 	SubscriptionLimitVideo, SubscriptionLimitAudio int32
 
 	UseOneShotSignallingMode bool
+
+	StreamRoom       bool
+	StreamerIdentity string
 }
 
 // SubscriptionManager manages a participant's subscriptions
@@ -552,6 +556,26 @@ func (m *SubscriptionManager) subscribe(s *trackSubscription) error {
 	}
 
 	s.setPublisher(res.PublisherIdentity, res.PublisherID)
+
+	if m.params.StreamRoom {
+		s.logger.Infow("in a stream room, only allow participants to sub to streamer")
+		var (
+			p         = m.params.Participant.Identity()
+			publisher = res.PublisherIdentity
+			streamer  = livekit.ParticipantIdentity(m.params.StreamerIdentity)
+		)
+
+		s.logger.Debugw(fmt.Sprintf("%s is subbing to a track published by %s", p, publisher))
+		// if p is not streamer and the track is not published by the streamer, avoid subbing
+		if p != streamer && publisher != streamer {
+
+			s.logger.Debugw(fmt.Sprintf("%s can't sub to the track published by %s beacuse %s is not a streamer", p, publisher, publisher))
+			if err := m.unsubscribe(s); err != nil {
+				s.logger.Errorw("failed to unsubscribe", err)
+			}
+			return nil
+		}
+	}
 
 	permChanged := s.setHasPermission(res.HasPermission)
 	if permChanged {

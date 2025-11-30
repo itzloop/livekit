@@ -59,6 +59,8 @@ type BytesTrackStats struct {
 	telemetry                            TelemetryService
 	reporter                             roomobs.TrackReporter
 	done                                 core.Fuse
+	mu                                   sync.Mutex
+	Address                              string
 }
 
 func NewBytesTrackStats(
@@ -122,32 +124,44 @@ func (s *BytesTrackStats) Stop() {
 func (s *BytesTrackStats) report() {
 	if recv := s.recv.Swap(0); recv > 0 {
 		packets := s.recvMessages.Swap(0)
-		s.telemetry.TrackStats(
-			StatsKeyForData(s.country, livekit.StreamType_UPSTREAM, s.pID, s.trackID),
-			&livekit.AnalyticsStat{
-				Streams: []*livekit.AnalyticsStream{
-					{
-						PrimaryBytes:   recv,
-						PrimaryPackets: packets,
-					},
+		key := StatsKeyForData(s.country, livekit.StreamType_UPSTREAM, s.pID, s.trackID)
+		key.Addr = s.Address
+		s.telemetry.TrackStats(key, &livekit.AnalyticsStat{
+			Streams: []*livekit.AnalyticsStream{
+				{
+					PrimaryBytes:   recv,
+					PrimaryPackets: packets,
 				},
 			},
+		},
 		)
 	}
 
 	if send := s.send.Swap(0); send > 0 {
 		packets := s.sendMessages.Swap(0)
-		s.telemetry.TrackStats(
-			StatsKeyForData(s.country, livekit.StreamType_DOWNSTREAM, s.pID, s.trackID),
-			&livekit.AnalyticsStat{
-				Streams: []*livekit.AnalyticsStream{
-					{
-						PrimaryBytes:   send,
-						PrimaryPackets: packets,
-					},
+		key := StatsKeyForData(s.country, livekit.StreamType_DOWNSTREAM, s.pID, s.trackID)
+		key.Addr = s.Address
+		s.telemetry.TrackStats(key, &livekit.AnalyticsStat{
+			Streams: []*livekit.AnalyticsStream{
+				{
+					PrimaryBytes:   send,
+					PrimaryPackets: packets,
 				},
 			},
+		},
 		)
+	}
+}
+
+func (s *BytesTrackStats) ChangeAddress(address string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.Address == "" {
+		s.Address = address
+		s.report()
+	} else {
+		s.report()
+		s.Address = address
 	}
 }
 
@@ -155,7 +169,9 @@ func (s *BytesTrackStats) worker() {
 	ticker := time.NewTicker(5 * time.Second)
 	defer func() {
 		ticker.Stop()
+		s.mu.Lock()
 		s.report()
+		s.mu.Unlock()
 	}()
 
 	for {
@@ -163,7 +179,9 @@ func (s *BytesTrackStats) worker() {
 		case <-s.done.Watch():
 			return
 		case <-ticker.C:
+			s.mu.Lock()
 			s.report()
+			s.mu.Unlock()
 		}
 	}
 }

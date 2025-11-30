@@ -15,6 +15,7 @@
 package prometheus
 
 import (
+	"github.com/livekit/livekit-server/pkg/geoip"
 	"strconv"
 	"time"
 
@@ -38,6 +39,7 @@ var (
 	trackSubscribeUserError atomic.Int32
 
 	promRoomCurrent            prometheus.Gauge
+	promRoomCurrentWithNodeIP  prometheus.Gauge
 	promRoomDuration           prometheus.Histogram
 	promParticipantCurrent     prometheus.Gauge
 	promTrackPublishedCurrent  *prometheus.GaugeVec
@@ -47,6 +49,8 @@ var (
 	promSessionStartTime       *prometheus.HistogramVec
 	promSessionDuration        *prometheus.HistogramVec
 	promPubSubTime             *prometheus.HistogramVec
+
+	promSessionStartTimePerAsn *prometheus.HistogramVec
 )
 
 func initRoomStats(nodeID string, nodeType livekit.NodeType) {
@@ -100,7 +104,7 @@ func initRoomStats(nodeID string, nodeType livekit.NodeType) {
 		Subsystem:   "session",
 		Name:        "start_time_ms",
 		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
-		Buckets:     prometheus.ExponentialBucketsRange(100, 10000, 15),
+		Buckets:     prometheus.ExponentialBucketsRange(100, 20000, 15),
 	}, []string{"protocol_version"})
 	promSessionDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace:   livekitNamespace,
@@ -117,6 +121,14 @@ func initRoomStats(nodeID string, nodeType livekit.NodeType) {
 		Buckets:     []float64{100, 200, 500, 700, 1000, 5000, 10000},
 	}, append(promStreamLabels, "sdk", "kind", "count"))
 
+	promSessionStartTimePerAsn = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "session",
+		Name:        "session_time_ms_per_asn",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
+		Buckets:     prometheus.ExponentialBucketsRange(100, 20000, 20),
+	}, []string{"protocol_version", "asn"})
+
 	prometheus.MustRegister(promRoomCurrent)
 	prometheus.MustRegister(promRoomDuration)
 	prometheus.MustRegister(promParticipantCurrent)
@@ -127,6 +139,18 @@ func initRoomStats(nodeID string, nodeType livekit.NodeType) {
 	prometheus.MustRegister(promSessionStartTime)
 	prometheus.MustRegister(promSessionDuration)
 	prometheus.MustRegister(promPubSubTime)
+	prometheus.MustRegister(promSessionStartTimePerAsn)
+}
+
+func initRoomStatWithNodeIp(nodeIP, nodeID string, nodeType livekit.NodeType) {
+	promRoomCurrentWithNodeIP = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace:   livekitNamespace,
+		Subsystem:   "room",
+		Name:        "total_with_node_ip",
+		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String(), "node_ip": nodeIP},
+	})
+
+	prometheus.MustRegister(promRoomCurrentWithNodeIP)
 }
 
 func RoomStarted() {
@@ -249,8 +273,10 @@ func RecordTrackSubscribeFailure(err error, isUserError bool) {
 	}
 }
 
-func RecordSessionStartTime(protocolVersion int, d time.Duration) {
+func RecordSessionStartTime(protocolVersion int, d time.Duration, address string) {
+	asn := geoip.GetASOrganization(address)
 	promSessionStartTime.WithLabelValues(strconv.Itoa(protocolVersion)).Observe(float64(d.Milliseconds()))
+	promSessionStartTimePerAsn.WithLabelValues(strconv.Itoa(protocolVersion), asn).Observe(float64(d.Milliseconds()))
 }
 
 func RecordSessionDuration(protocolVersion int, d time.Duration) {
