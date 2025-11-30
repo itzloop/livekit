@@ -19,6 +19,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"net"
@@ -463,6 +464,14 @@ func (r *RoomManager) StartSession(
 		subscriberAllowPause = *pi.SubscriberAllowPause
 	}
 
+	var metadata = struct {
+		Stream           bool   `json:"stream"`
+		StreamerIdentity string `json:"streamer_identity"`
+	}{}
+	if err = json.Unmarshal([]byte(room.ToProto().Metadata), &metadata); err != nil {
+		logger.Warnw("failed to unmarshal room metadata", err, "metadata", room.ToProto().Metadata)
+	}
+
 	enabledCodecs := protoRoom.EnabledCodecs
 	if !slices.ContainsFunc(enabledCodecs, func(codec *livekit.Codec) bool {
 		return mime.IsMimeTypeStringRTX(codec.Mime)
@@ -471,6 +480,8 @@ func (r *RoomManager) StartSession(
 	}
 
 	participant, err = rtc.NewParticipant(rtc.ParticipantParams{
+		StreamerIdentity:        metadata.StreamerIdentity,
+		StreamRoom:              metadata.Stream,
 		Identity:                pi.Identity,
 		Name:                    pi.Name,
 		SID:                     sid,

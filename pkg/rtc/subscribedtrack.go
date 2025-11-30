@@ -82,6 +82,23 @@ type SubscribedTrack struct {
 }
 
 func NewSubscribedTrack(params SubscribedTrackParams) (*SubscribedTrack, error) {
+	var addr string
+	for _, detail := range params.Subscriber.GetICEConnectionInfo() {
+		for _, candidate := range detail.Remote {
+			if candidate.SelectedOrder != 0 {
+				addr = candidate.Remote.Address()
+			}
+		}
+	}
+	key := telemetry.StatsKeyForTrack(
+		params.Subscriber.GetCountry(),
+		livekit.StreamType_DOWNSTREAM,
+		params.Subscriber.ID(),
+		params.MediaTrack.ID(),
+		params.MediaTrack.Source(),
+		params.MediaTrack.Kind(),
+	)
+	key.Addr = addr
 	s := &SubscribedTrack{
 		params: params,
 		logger: params.Subscriber.GetLogger().WithComponent(sutils.ComponentSub).WithValues(
@@ -91,15 +108,8 @@ func NewSubscribedTrack(params SubscribedTrackParams) (*SubscribedTrack, error) 
 		),
 		versionGenerator: utils.NewDefaultTimedVersionGenerator(),
 		debouncer:        debounce.New(subscriptionDebounceInterval),
-		statsKey: telemetry.StatsKeyForTrack(
-			params.Subscriber.GetCountry(),
-			livekit.StreamType_DOWNSTREAM,
-			params.Subscriber.ID(),
-			params.MediaTrack.ID(),
-			params.MediaTrack.Source(),
-			params.MediaTrack.Kind(),
-		),
-		reporter: params.Subscriber.GetReporter().WithTrack(params.MediaTrack.ID().String()),
+		statsKey:         key,
+		reporter:         params.Subscriber.GetReporter().WithTrack(params.MediaTrack.ID().String()),
 	}
 
 	var rtcpFeedback []webrtc.RTCPFeedback

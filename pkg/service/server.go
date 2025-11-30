@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/livekit/livekit-server/pkg/geoip"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -326,6 +327,8 @@ func (s *LivekitServer) Stop(force bool) {
 		waitingForParticipants = s.roomManager.HasParticipants()
 	}
 	partTicker.Stop()
+
+	geoip.Close()
 
 	if !s.running.Swap(false) {
 		return

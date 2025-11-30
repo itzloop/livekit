@@ -460,6 +460,10 @@ func (t *MediaTrack) AddReceiver(receiver *webrtc.RTPReceiver, track sfu.TrackRe
 			regressionTargetCodecReceived := t.regressionTargetCodecReceived
 			t.lock.RUnlock()
 			if priority == 0 || regressionTargetCodecReceived {
+				pair, _ := receiver.Transport().ICETransport().GetSelectedCandidatePair()
+				if pair != nil {
+					statsKey.Addr = pair.Remote.Address
+				}
 				t.params.TelemetryListener.OnTrackStats(statsKey, stat)
 
 				if cs, ok := telemetry.CondenseStat(stat); ok {

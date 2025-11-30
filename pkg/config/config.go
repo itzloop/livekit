@@ -16,6 +16,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/livekit/livekit-server/pkg/geoip"
 	"os"
 	"reflect"
 	"strconv"
@@ -90,6 +91,8 @@ type Config struct {
 	EnableDataTracks bool `yaml:"enable_data_tracks,omitempty"`
 
 	API APIConfig `yaml:"api,omitempty"`
+
+	GeoIP geoip.Config `yaml:"geoip,omitempty"`
 }
 
 type RTCConfig struct {
