@@ -15,7 +15,6 @@
 package prometheus
 
 import (
-	"github.com/livekit/livekit-server/pkg/geoip"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/atomic"
 
@@ -319,20 +318,15 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 	prometheus.MustRegister(promPacketTotalASN)
 }
 
-func IncrementByteWithAsn(direction Direction, count uint64, address string) {
-	res := geoip.GetASOrganization(address)
-
-	promAsnBytes.WithLabelValues(res, string(direction)).Add(float64(count))
+func IncrementByteWithAsn(direction Direction, count uint64, asn string) {
+	promAsnBytes.WithLabelValues(asn, string(direction)).Add(float64(count))
 }
 
-func IncrementByteRate(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, count uint64, address string) {
-	res := geoip.GetASOrganization(address)
-
-	promAsnByteRate.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(count))
+func IncrementByteRate(direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, count uint64, asn string) {
+	promAsnByteRate.WithLabelValues(string(direction), trackSource.String(), trackType.String(), asn).Observe(float64(count))
 }
 
-func IncrementPackets(country string, direction Direction, count uint64, retransmit bool, address string) {
-	res := geoip.GetASOrganization(address)
+func IncrementPackets(country string, direction Direction, count uint64, retransmit bool, asn string) {
 	var transmission TransmissionType
 	if retransmit {
 		transmission = TransmissionRetransmit
@@ -340,8 +334,8 @@ func IncrementPackets(country string, direction Direction, count uint64, retrans
 		transmission = TransmissionInitial
 	}
 	promPacketTotal.WithLabelValues(string(direction), string(transmission), country).Add(float64(count))
-	if address != "" {
-		promPacketTotalASN.WithLabelValues(string(direction), string(transmission), res).Add(float64(count))
+	if asn != "" {
+		promPacketTotalASN.WithLabelValues(string(direction), string(transmission), asn).Add(float64(count))
 	}
 	if direction == Incoming {
 		packetsIn.Add(count)
@@ -353,8 +347,7 @@ func IncrementPackets(country string, direction Direction, count uint64, retrans
 	}
 }
 
-func IncrementBytes(country string, direction Direction, count uint64, retransmit bool, address string) {
-	res := geoip.GetASOrganization(address)
+func IncrementBytes(country string, direction Direction, count uint64, retransmit bool, asn string) {
 	var transmission TransmissionType
 	if retransmit {
 		transmission = TransmissionRetransmit
@@ -362,8 +355,8 @@ func IncrementBytes(country string, direction Direction, count uint64, retransmi
 		transmission = TransmissionInitial
 	}
 	promPacketBytes.WithLabelValues(string(direction), string(transmission), country).Add(float64(count))
-	if address != "" {
-		promPacketBytesASN.WithLabelValues(string(direction), string(transmission), res).Add(float64(count))
+	if asn != "" {
+		promPacketBytesASN.WithLabelValues(string(direction), string(transmission), asn).Add(float64(count))
 	}
 
 	if direction == Incoming {
@@ -376,16 +369,15 @@ func IncrementBytes(country string, direction Direction, count uint64, retransmi
 	}
 }
 
-func IncrementRTCP(country string, direction Direction, nack, pli, fir uint32, address string) {
-	res := geoip.GetASOrganization(address)
+func IncrementRTCP(country string, direction Direction, nack, pli, fir uint32, asn string) {
 	if nack > 0 {
 		promNackTotal.WithLabelValues(string(direction), country).Add(float64(nack))
-		promNackTotalASN.WithLabelValues(string(direction), res).Add(float64(nack))
+		promNackTotalASN.WithLabelValues(string(direction), asn).Add(float64(nack))
 		nackTotal.Add(uint64(nack))
 	}
 	if pli > 0 {
 		promPliTotal.WithLabelValues(string(direction), country).Add(float64(pli))
-		promPliTotalASN.WithLabelValues(string(direction), res).Add(float64(pli))
+		promPliTotalASN.WithLabelValues(string(direction), asn).Add(float64(pli))
 	}
 	if fir > 0 {
 		promFirTotal.WithLabelValues(string(direction), country).Add(float64(fir))
@@ -399,44 +391,40 @@ func RecordPacketLoss(
 	trackType livekit.TrackType,
 	lost uint32,
 	total uint32,
-	address string,
+	asn string,
 ) {
-	res := geoip.GetASOrganization(address)
 	if total > 0 {
 		promPacketLoss.WithLabelValues(string(direction), trackSource.String(), trackType.String(), country).Observe(float64(lost) / float64(total) * 100)
-		promPacketLossASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(lost) / float64(total) * 100)
+		promPacketLossASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), asn).Observe(float64(lost) / float64(total) * 100)
 	}
 	if lost > 0 {
 		promPacketLossTotal.WithLabelValues(string(direction), trackSource.String(), trackType.String(), country).Add(float64(lost))
-		promPacketLossTotalASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Add(float64(lost))
+		promPacketLossTotalASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), asn).Add(float64(lost))
 	}
 }
 
-func RecordPacketOutOfOrder(country string, direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, ooo, total uint32, address string) {
-	res := geoip.GetASOrganization(address)
+func RecordPacketOutOfOrder(country string, direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, ooo, total uint32, asn string) {
 	if total > 0 {
 		promPacketOutOfOrder.WithLabelValues(string(direction), trackSource.String(), trackType.String(), country).Observe(float64(ooo) / float64(total) * 100)
-		promPacketOutOfOrderASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(ooo) / float64(total) * 100)
+		promPacketOutOfOrderASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), asn).Observe(float64(ooo) / float64(total) * 100)
 	}
 	if ooo > 0 {
 		promPacketOutOfOrderTotal.WithLabelValues(string(direction), trackSource.String(), trackType.String(), country).Add(float64(ooo))
-		promPacketOutOfOrderTotalASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Add(float64(ooo))
+		promPacketOutOfOrderTotalASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), asn).Add(float64(ooo))
 	}
 }
 
-func RecordJitter(country string, direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, jitter uint32, address string) {
-	res := geoip.GetASOrganization(address)
+func RecordJitter(country string, direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, jitter uint32, asn string) {
 	if jitter > 0 {
 		promJitter.WithLabelValues(string(direction), trackSource.String(), trackType.String(), country).Observe(float64(jitter))
-		promJitterASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(jitter))
+		promJitterASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), asn).Observe(float64(jitter))
 	}
 }
 
-func RecordRTT(country string, direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, rtt uint32, address string) {
-	res := geoip.GetASOrganization(address)
+func RecordRTT(country string, direction Direction, trackSource livekit.TrackSource, trackType livekit.TrackType, rtt uint32, asn string) {
 	if rtt > 0 {
 		promRTT.WithLabelValues(string(direction), trackSource.String(), trackType.String(), country).Observe(float64(rtt))
-		promRTTASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), res).Observe(float64(rtt))
+		promRTTASN.WithLabelValues(string(direction), trackSource.String(), trackType.String(), asn).Observe(float64(rtt))
 	}
 }
 

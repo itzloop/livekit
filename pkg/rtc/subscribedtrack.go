@@ -15,6 +15,7 @@
 package rtc
 
 import (
+	"github.com/livekit/livekit-server/pkg/geoip"
 	"sync"
 	"time"
 
@@ -82,14 +83,6 @@ type SubscribedTrack struct {
 }
 
 func NewSubscribedTrack(params SubscribedTrackParams) (*SubscribedTrack, error) {
-	var addr string
-	for _, detail := range params.Subscriber.GetICEConnectionInfo() {
-		for _, candidate := range detail.Remote {
-			if candidate.SelectedOrder != 0 {
-				addr = candidate.Remote.Address()
-			}
-		}
-	}
 	key := telemetry.StatsKeyForTrack(
 		params.Subscriber.GetCountry(),
 		livekit.StreamType_DOWNSTREAM,
@@ -98,7 +91,7 @@ func NewSubscribedTrack(params SubscribedTrackParams) (*SubscribedTrack, error) 
 		params.MediaTrack.Source(),
 		params.MediaTrack.Kind(),
 	)
-	key.Addr = addr
+	key.ASN = geoip.GetASOrganization(params.Subscriber.GetClientInfo().Address)
 	s := &SubscribedTrack{
 		params: params,
 		logger: params.Subscriber.GetLogger().WithComponent(sutils.ComponentSub).WithValues(

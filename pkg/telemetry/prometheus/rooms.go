@@ -15,7 +15,6 @@
 package prometheus
 
 import (
-	"github.com/livekit/livekit-server/pkg/geoip"
 	"strconv"
 	"time"
 
@@ -286,8 +285,7 @@ func RecordTrackSubscribeCancels(numCancels int32) {
 	promTrackSubscribeCounter.WithLabelValues("cancel", "").Add(float64(numCancels))
 }
 
-func RecordSessionStartTime(protocolVersion int, d time.Duration, address string) {
-	asn := geoip.GetASOrganization(address)
+func RecordSessionStartTime(protocolVersion int, d time.Duration, asn string) {
 	promSessionStartTime.WithLabelValues(strconv.Itoa(protocolVersion)).Observe(float64(d.Milliseconds()))
 	promSessionStartTimePerAsn.WithLabelValues(strconv.Itoa(protocolVersion), asn).Observe(float64(d.Milliseconds()))
 }
